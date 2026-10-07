@@ -72,6 +72,7 @@ class FillService:
         user_settings = get_settings(self.telegram_id)
         weekly_settings = get_weekly_activity_settings(self.telegram_id)
         is_internship = bool(user_settings.get("is_internship", 0))
+        is_haid = bool(user_settings.get("is_haid", 0))
 
         try:
             for meb in plan["mebs_detail"]:
@@ -93,13 +94,20 @@ class FillService:
                             if not details:
                                 continue
 
-                            # Choose best category (e.g. Melaksanakan)
+                            # Get saksi per activity setting
+                            act_set = weekly_settings.get(h_name, {})
+                            if act_set.get("enabled") == 0:
+                                continue
+
+                            # Handle Sholat Jumat for female / haid
+                            if "sholat jumat" in h_name.lower() and is_haid:
+                                continue
+
+                            # Choose best category
                             best_detail = details[0]
                             cat_name = best_detail.get("category", "Melaksanakan")
                             point = best_detail.get("point", 1)
 
-                            # Get saksi per activity setting
-                            act_set = weekly_settings.get(h_name, {})
                             w_type = act_set.get("witness_type", "Guru")
                             w_name = act_set.get("witness_name", "")
 
@@ -153,11 +161,25 @@ class FillService:
                         for item in daily_items:
                             deed_id = item.get("deed_id")
                             deedable_id = item.get("deedable_id")
+                            item_name = item.get("name", "").lower()
                             if deedable_id:
+                                # Determine category based on haid status for salat/zikir
+                                selected_cat = "Melaksanakan"
+                                do_flag = "true"
+                                if is_haid and any(s in item_name for s in ("salat", "sholat", "zikir")):
+                                    opts = item.get("options", [])
+                                    if "Saya sedang berhalangan" in opts:
+                                        selected_cat = "Saya sedang berhalangan"
+                                    elif "Halangan" in opts:
+                                        selected_cat = "Halangan"
+                                    else:
+                                        selected_cat = "Tidak melaksanakan"
+                                    do_flag = "false"
+
                                 cat_entry = {
-                                    "category": "Melaksanakan",
-                                    "point": 1,
-                                    "do": "true",
+                                    "category": selected_cat,
+                                    "point": 0 if is_haid and any(s in item_name for s in ("salat", "sholat")) else 1,
+                                    "do": do_flag,
                                     "deedable_id": deedable_id
                                 }
                                 if deed_id:

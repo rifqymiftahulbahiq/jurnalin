@@ -21,6 +21,7 @@ async def settings_menu_handler(update: Update, context: ContextTypes.DEFAULT_TY
     puasa = st.get("puasa_sunnah", "Melaksanakan 2 hari")
     refleksi = "🟢 ON" if st.get("refleksi_mingguan") else "🔴 OFF"
     internship = "🟢 YA (PKL)" if st.get("is_internship") else "🔴 TIDAK"
+    haid_status = "🔴 Sedang Haid" if st.get("is_haid") else "🟢 Normal"
 
     text = (
         "⚙️ PENGATURAN JURNALIN\n\n"
@@ -28,6 +29,7 @@ async def settings_menu_handler(update: Update, context: ContextTypes.DEFAULT_TY
         f"• Puasa Sunnah: {puasa}\n"
         f"• Refleksi Mingguan: {refleksi}\n"
         f"• Status Internship / PKL: {internship}\n"
+        f"• Kondisi Siswi: {haid_status}\n"
         f"• Saksi Mingguan: Dikonfigurasi per aktivitas\n\n"
         "Pilih kategori pengaturan di bawah:"
     )
@@ -38,11 +40,12 @@ async def settings_menu_handler(update: Update, context: ContextTypes.DEFAULT_TY
             InlineKeyboardButton("📆 Pembiasaan Mingguan", callback_data="set_weekly_menu"),
         ],
         [
-            InlineKeyboardButton(f"🌙 Puasa Sunnah ({puasa[:10]}...)", callback_data="set_puasa_menu"),
+            InlineKeyboardButton(f"🌙 Puasa ({puasa[:8]}...)", callback_data="set_puasa_menu"),
             InlineKeyboardButton(f"📝 Refleksi ({refleksi})", callback_data="toggle_refleksi"),
         ],
         [
-            InlineKeyboardButton(f"💼 Status PKL/Internship ({internship})", callback_data="toggle_internship"),
+            InlineKeyboardButton(f"💼 Status PKL ({internship})", callback_data="toggle_internship"),
+            InlineKeyboardButton(f"🚺 Kondisi: {haid_status}", callback_data="toggle_haid"),
         ],
         [
             InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")
@@ -66,6 +69,9 @@ async def toggle_setting_callback(update: Update, context: ContextTypes.DEFAULT_
     elif query.data == "toggle_internship":
         new_val = 0 if st.get("is_internship") else 1
         update_setting(user_id, "is_internship", new_val)
+    elif query.data == "toggle_haid":
+        new_val = 0 if st.get("is_haid") else 1
+        update_setting(user_id, "is_haid", new_val)
 
     await settings_menu_handler(update, context)
 

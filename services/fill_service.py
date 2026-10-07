@@ -7,7 +7,7 @@ from kejar.daily import get_daily_activities, parse_daily_response, update_daily
 from kejar.signature import sign_weekly_journal_api
 from kejar.behavior import get_behavior_journal_status
 from services.planner import generate_journal_plan
-from database import get_settings, get_weekly_activity_settings, log_fill_action
+from database import get_settings, get_weekly_activity_settings, log_fill_action, update_meb_completion_status
 
 logger = logging.getLogger("jurnalin.fill")
 
@@ -234,8 +234,11 @@ class FillService:
                                 "status": "SUCCESS",
                                 "message": "✍️ Jurnal berhasil ditandatangani."
                             })
+                            update_meb_completion_status(self.telegram_id, meb_num, "SUDAH LENGKAP")
                     except Exception as e_sign:
                         logger.debug(f"Signature step exception: {e_sign}")
+                elif meb["eligible_dates"]:
+                    update_meb_completion_status(self.telegram_id, meb_num, "SUDAH LENGKAP")
 
         except SessionExpiredError:
             summary["failed_count"] += 1

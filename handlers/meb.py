@@ -150,17 +150,21 @@ async def meb_list_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     school_week=m.get("school_week", ""),
                     is_matrikulasi=bool(m.get("is_matrikulasi", 0))
                 )
+                db_status = m.get("completion_status", "BELUM LENGKAP")
                 e_dates = eligible_dates(m_obj, today)
-                if e_dates:
-                    status_str = f"🟢 Available ({len(e_dates)} hari eligible)"
+
+                if db_status == "SUDAH LENGKAP":
+                    status_str = "🟢 SUDAH LENGKAP (Telah Ditandatangani)"
                 elif today < s_d:
-                    status_str = "⏳ Belum dimulai"
+                    status_str = "⏳ BELUM DIMULAI"
+                elif e_dates:
+                    status_str = f"🟡 BELUM LENGKAP ({len(e_dates)} hari eligible perlu diisi)"
                 else:
-                    status_str = "✅ Selesai"
+                    status_str = "🟢 SUDAH LENGKAP"
 
             label_name = m.get('label') or f"MEB {m.get('meb_number')}"
             lines.append(
-                f"• {label_name}: {m['start_date'][:10]} s/d {m['end_date'][:10]}\n"
+                f"• {label_name} ({m['start_date'][:10]} s/d {m['end_date'][:10]})\n"
                 f"  Status: {status_str}"
             )
         text = "\n".join(lines)

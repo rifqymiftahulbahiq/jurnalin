@@ -76,6 +76,7 @@ def init_database():
         )
     """)
     add_column_if_missing(cursor, "meb", "school_week_id", "TEXT")
+    add_column_if_missing(cursor, "meb", "completion_status", "TEXT DEFAULT 'BELUM LENGKAP'")
 
     # 4. MEB Target Settings
     cursor.execute("""
@@ -246,12 +247,14 @@ def save_user_mebs(telegram_id: int, meb_list: list):
         else:
             e_str = end_date.isoformat()
 
+        completion_status = getattr(m, 'completion_status', m.get('completion_status') if isinstance(m, dict) else 'BELUM LENGKAP')
+
         cursor.execute("""
             INSERT INTO meb (
                 telegram_id, kejar_id, report_period_id, meb_number, label,
-                start_date, end_date, school_week, school_week_id, is_matrikulasi, updated_at
+                start_date, end_date, school_week, school_week_id, is_matrikulasi, completion_status, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(telegram_id, meb_number) DO UPDATE SET
                 kejar_id = excluded.kejar_id,
                 report_period_id = excluded.report_period_id,
@@ -261,8 +264,20 @@ def save_user_mebs(telegram_id: int, meb_list: list):
                 school_week = excluded.school_week,
                 school_week_id = excluded.school_week_id,
                 is_matrikulasi = excluded.is_matrikulasi,
+                completion_status = excluded.completion_status,
                 updated_at = CURRENT_TIMESTAMP
-        """, (telegram_id, meb_id, report_period_id, meb_number, label, s_str, e_str, str(school_week), school_week_id, is_matrikulasi))
+        """, (telegram_id, meb_id, report_period_id, meb_number, label, s_str, e_str, str(school_week), school_week_id, is_matrikulasi, completion_status))
+    conn.commit()
+    conn.close()
+
+
+def update_meb_completion_status(telegram_id: int, meb_number: int, status_str: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE meb SET completion_status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE telegram_id = ? AND meb_number = ?
+    """, (status_str, telegram_id, meb_number))
     conn.commit()
     conn.close()
 

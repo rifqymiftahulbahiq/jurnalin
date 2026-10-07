@@ -148,7 +148,7 @@ async def weekly_settings_menu_handler(update: Update, context: ContextTypes.DEF
 
     for act in default_activities:
         act_data = w_settings.get(act, {})
-        w_type = act_data.get("witness_type", "Guru")
+        w_type = act_data.get("witness_type", "Orang Tua")
         w_name = act_data.get("witness_name", "")
         n_str = f" ({w_name})" if w_name else ""
         lines.append(f"• {act}: Saksi = {w_type}{n_str}")

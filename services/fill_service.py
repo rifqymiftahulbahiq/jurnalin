@@ -110,7 +110,7 @@ class FillService:
                             cat_name = best_detail.get("category", "Melaksanakan")
                             point = best_detail.get("point", 1)
 
-                            w_type = act_set.get("witness_type", "Guru")
+                            w_type = act_set.get("witness_type", "Orang Tua")
                             w_name = act_set.get("witness_name", "")
 
                             for d_str in meb["eligible_dates"]:

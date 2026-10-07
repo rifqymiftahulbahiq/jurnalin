@@ -100,7 +100,7 @@ def init_database():
             activity_key TEXT NOT NULL,
             activity_name TEXT NOT NULL,
             enabled INTEGER DEFAULT 1,
-            witness_type TEXT DEFAULT 'Guru',
+            witness_type TEXT DEFAULT 'Orang Tua',
             witness_name TEXT DEFAULT '',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

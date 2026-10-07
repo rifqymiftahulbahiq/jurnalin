@@ -2,7 +2,7 @@ import logging
 from typing import Dict, Any, Optional
 from playwright.async_api import async_playwright
 from config import KEJAR_BASE_URL
-from kejar.browser_session import get_profile_dir, save_user_cookies, ensure_playwright_browsers
+from kejar.browser_session import get_profile_dir, save_user_cookies, ensure_playwright_browsers_async
 from kejar.client import KejarClient
 
 logger = logging.getLogger("jurnalin.signature")
@@ -46,14 +46,17 @@ async def sign_weekly_journal_browser(telegram_id: int, username: str, password_
                 )
             except Exception as launch_err:
                 logger.warning(f"Signature browser launch failed ({launch_err}), auto-installing chromium...")
-                ensure_playwright_browsers(force=True)
+                await ensure_playwright_browsers_async(force=True)
                 context = await p.chromium.launch_persistent_context(
                     user_data_dir=user_profile,
                     headless=True,
                     args=["--no-sandbox", "--disable-setuid-sandbox"]
                 )
             page = context.pages[0] if context.pages else await context.new_page()
-            await page.goto(url, wait_until="networkidle", timeout=30000)
+            try:
+                await page.goto(url, wait_until="domcontentloaded", timeout=15000)
+            except Exception as goto_err:
+                logger.warning(f"Signature page goto warning: {goto_err}")
 
             # Look for 'Tanda Tangani' button
             sign_btn = page.locator("button:has-text('Tanda Tangani'), a:has-text('Tanda Tangani'), div:has-text('Tanda Tangani')").first

@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Any
 from playwright.async_api import async_playwright
 from config import KEJAR_BASE_URL
-from kejar.browser_session import get_profile_dir, save_user_cookies, ensure_playwright_browsers
+from kejar.browser_session import get_profile_dir, save_user_cookies, ensure_playwright_browsers_async
 from kejar.discovery import record_request
 from database import set_kejar_account_connected
 
@@ -39,7 +39,7 @@ async def login_kejar(telegram_id: int, username: str, password_temp: str, headl
                 )
             except Exception as launch_err:
                 logger.warning(f"Initial browser launch failed ({launch_err}), auto-installing chromium...")
-                ensure_playwright_browsers(force=True)
+                await ensure_playwright_browsers_async(force=True)
                 context = await p.chromium.launch_persistent_context(
                     user_data_dir=user_profile,
                     headless=headless,
@@ -64,7 +64,11 @@ async def login_kejar(telegram_id: int, username: str, password_temp: str, headl
                         pass
 
             page.on("request", handle_request)
-            await page.goto(login_url, wait_until="networkidle", timeout=30000)
+            
+            try:
+                await page.goto(login_url, wait_until="domcontentloaded", timeout=15000)
+            except Exception as goto_err:
+                logger.warning(f"Goto timeout/error ({goto_err}), proceeding with current page state")
 
             # Check if already logged in / redirected to dashboard
             if "/student" in page.url or "/dashboard" in page.url:
@@ -120,7 +124,7 @@ async def login_kejar(telegram_id: int, username: str, password_temp: str, headl
 
             # Wait for redirection to logged-in state
             try:
-                await page.wait_for_url(lambda url: "/login" not in url, timeout=10000)
+                await page.wait_for_url(lambda url: "/login" not in url, timeout=8000)
             except Exception:
                 pass
 

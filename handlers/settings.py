@@ -59,25 +59,28 @@ async def settings_menu_handler(update: Update, context: ContextTypes.DEFAULT_TY
 
     if query:
         await query.edit_message_text(text, reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)
 
 
 async def toggle_setting_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
 
     user_id = update.effective_user.id
     st = get_settings(user_id)
 
-    if query.data == "toggle_refleksi":
+    if query and query.data == "toggle_refleksi":
         new_val = 0 if st.get("refleksi_mingguan") else 1
         update_setting(user_id, "refleksi_mingguan", new_val)
-    elif query.data == "toggle_internship":
+    elif query and query.data == "toggle_internship":
         new_val = 0 if st.get("is_internship") else 1
         update_setting(user_id, "is_internship", new_val)
-    elif query.data == "toggle_haid":
+    elif query and query.data == "toggle_haid":
         new_val = 0 if st.get("is_haid") else 1
         update_setting(user_id, "is_haid", new_val)
-    elif query.data == "toggle_autosign":
+    elif query and query.data == "toggle_autosign":
         new_val = 0 if st.get("auto_sign", 1) else 1
         update_setting(user_id, "auto_sign", new_val)
 
@@ -86,7 +89,8 @@ async def toggle_setting_callback(update: Update, context: ContextTypes.DEFAULT_
 
 async def puasa_sunnah_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
 
     text = "🌙 OPSI PUASA SUNNAH:\nPilih preferensi pengisian Puasa Sunnah kamu:"
     options = [
@@ -102,12 +106,17 @@ async def puasa_sunnah_menu_handler(update: Update, context: ContextTypes.DEFAUL
     ]
     buttons.append([InlineKeyboardButton("⬅️ Kembali", callback_data="menu_settings")])
 
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+    keyboard = InlineKeyboardMarkup(buttons)
+    if query:
+        await query.edit_message_text(text, reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)
 
 
 async def save_puasa_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
 
     user_id = update.effective_user.id
     options = [
@@ -117,29 +126,36 @@ async def save_puasa_callback(update: Update, context: ContextTypes.DEFAULT_TYPE
         "Tidak ada kegiatan"
     ]
 
-    idx = int(query.data.replace("save_puasa_", ""))
-    selected = options[idx] if 0 <= idx < len(options) else options[0]
+    if query and query.data:
+        idx = int(query.data.replace("save_puasa_", ""))
+        selected = options[idx] if 0 <= idx < len(options) else options[0]
+        update_setting(user_id, "puasa_sunnah", selected)
 
-    update_setting(user_id, "puasa_sunnah", selected)
     await settings_menu_handler(update, context)
+
+
+DEFAULT_WEEKLY_ACTIVITIES = [
+    "Aktivitas Fisik",
+    "Sholat Jumat",
+    "Membantu Memasak",
+    "Membersihkan Rumah",
+    "Mencuci Baju",
+    "Kuku, Telinga, dan Bercukur"
+]
 
 
 async def weekly_settings_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
 
     user_id = update.effective_user.id
     w_settings = get_weekly_activity_settings(user_id)
 
-    default_activities = [
-        "Aktivitas Fisik", "Sholat Jumat", "Membantu Memasak",
-        "Membersihkan Rumah", "Mencuci Baju", "Kuku, Telinga, dan Bercukur"
-    ]
-
     lines = ["📆 SAKSI PEMBIASAAN MINGGUAN:\n"]
     buttons = []
 
-    for act in default_activities:
+    for idx, act in enumerate(DEFAULT_WEEKLY_ACTIVITIES):
         act_data = w_settings.get(act, {})
         w_type = act_data.get("witness_type", "Orang Tua")
         w_name = act_data.get("witness_name", "")
@@ -147,63 +163,111 @@ async def weekly_settings_menu_handler(update: Update, context: ContextTypes.DEF
         lines.append(f"• {act}: Saksi = {w_type}{n_str}")
 
         buttons.append([
-            InlineKeyboardButton(f"⚙️ Saksi: {act[:15]}...", callback_data=f"edit_witness_{act}")
+            InlineKeyboardButton(f"⚙️ Saksi {act[:14]}: {w_type}", callback_data=f"edit_w_{idx}")
         ])
 
+    buttons.append([
+        InlineKeyboardButton("👥 Set Semua: Orang Tua", callback_data="save_wall_Orang Tua"),
+        InlineKeyboardButton("👥 Set Semua: Guru", callback_data="save_wall_Guru"),
+    ])
     buttons.append([InlineKeyboardButton("⬅️ Kembali", callback_data="menu_settings")])
     text = "\n".join(lines)
 
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+    keyboard = InlineKeyboardMarkup(buttons)
+    if query:
+        await query.edit_message_text(text, reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)
 
 
 async def edit_witness_type_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
 
-    act_name = query.data.replace("edit_witness_", "")
-    context.user_data["editing_witness_act"] = act_name
+    raw_data = query.data if query else ""
+    # Format: edit_w_{idx} or edit_witness_{act}
+    if raw_data.startswith("edit_w_"):
+        idx_str = raw_data.replace("edit_w_", "")
+        idx = int(idx_str) if idx_str.isdigit() else 0
+    else:
+        idx = 0
+
+    act_name = DEFAULT_WEEKLY_ACTIVITIES[idx] if 0 <= idx < len(DEFAULT_WEEKLY_ACTIVITIES) else DEFAULT_WEEKLY_ACTIVITIES[0]
 
     text = (
         f"⚙️ PILIH SAKSI UNTUK: {act_name}\n"
         "Pilih tipe saksi di bawah ini:"
     )
 
-    types = ["Guru", "Teman", "Orang Tua", "Lainnya"]
+    types = ["Orang Tua", "Guru", "Teman", "Lainnya"]
     buttons = [
-        [InlineKeyboardButton(t, callback_data=f"save_wtype_{t}")]
+        [InlineKeyboardButton(f"👥 Saksi: {t}", callback_data=f"save_w_{idx}_{t}")]
         for t in types
     ]
     buttons.append([InlineKeyboardButton("⬅️ Batal", callback_data="set_weekly_menu")])
 
-    await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(buttons))
+    keyboard = InlineKeyboardMarkup(buttons)
+    if query:
+        await query.edit_message_text(text, reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)
 
 
 async def save_witness_type_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
 
     user_id = update.effective_user.id
-    act_name = context.user_data.get("editing_witness_act", "Aktivitas")
-    w_type = query.data.replace("save_wtype_", "")
+    raw_data = query.data if query else ""
 
-    current_settings = get_weekly_activity_settings(user_id)
-    w_name = current_settings.get(act_name, {}).get("witness_name", "")
+    # Expected pattern: save_w_{idx}_{w_type}
+    if raw_data.startswith("save_w_"):
+        parts = raw_data.split("_", 3)
+        if len(parts) >= 4:
+            idx = int(parts[2]) if parts[2].isdigit() else 0
+            w_type = parts[3]
+            act_name = DEFAULT_WEEKLY_ACTIVITIES[idx] if 0 <= idx < len(DEFAULT_WEEKLY_ACTIVITIES) else DEFAULT_WEEKLY_ACTIVITIES[0]
 
-    save_weekly_activity_setting(
-        telegram_id=user_id,
-        activity_key=act_name,
-        activity_name=act_name,
-        enabled=1,
-        witness_type=w_type,
-        witness_name=w_name
-    )
+            save_weekly_activity_setting(
+                telegram_id=user_id,
+                activity_key=act_name,
+                activity_name=act_name,
+                enabled=1,
+                witness_type=w_type,
+                witness_name=""
+            )
+
+    await weekly_settings_menu_handler(update, context)
+
+
+async def save_all_witness_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if query:
+        await query.answer()
+
+    user_id = update.effective_user.id
+    raw_data = query.data if query else ""
+    w_type = raw_data.replace("save_wall_", "") if raw_data.startswith("save_wall_") else "Orang Tua"
+
+    for act in DEFAULT_WEEKLY_ACTIVITIES:
+        save_weekly_activity_setting(
+            telegram_id=user_id,
+            activity_key=act,
+            activity_name=act,
+            enabled=1,
+            witness_type=w_type,
+            witness_name=""
+        )
 
     await weekly_settings_menu_handler(update, context)
 
 
 async def daily_settings_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        await query.answer()
 
     text = (
         "🕌 PEMBIASAAN HARIAN\n\n"
@@ -213,4 +277,8 @@ async def daily_settings_menu_handler(update: Update, context: ContextTypes.DEFA
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("⬅️ Kembali", callback_data="menu_settings")]
     ])
-    await query.edit_message_text(text, reply_markup=keyboard)
+    if query:
+        await query.edit_message_text(text, reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)
+

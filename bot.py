@@ -33,6 +33,7 @@ from handlers.settings import (
     weekly_settings_menu_handler,
     edit_witness_type_handler,
     save_witness_type_callback,
+    save_all_witness_callback,
     daily_settings_menu_handler,
 )
 from handlers.preview import preview_handler
@@ -93,8 +94,9 @@ def build_application() -> Application:
     app.add_handler(CallbackQueryHandler(puasa_sunnah_menu_handler, pattern="^set_puasa_menu$"))
     app.add_handler(CallbackQueryHandler(save_puasa_callback, pattern="^save_puasa_\\d+$"))
     app.add_handler(CallbackQueryHandler(weekly_settings_menu_handler, pattern="^set_weekly_menu$"))
-    app.add_handler(CallbackQueryHandler(edit_witness_type_handler, pattern="^edit_witness_"))
-    app.add_handler(CallbackQueryHandler(save_witness_type_callback, pattern="^save_wtype_"))
+    app.add_handler(CallbackQueryHandler(edit_witness_type_handler, pattern="^(edit_w_|edit_witness_)"))
+    app.add_handler(CallbackQueryHandler(save_witness_type_callback, pattern="^(save_w_|save_wtype_)"))
+    app.add_handler(CallbackQueryHandler(save_all_witness_callback, pattern="^save_wall_"))
     app.add_handler(CallbackQueryHandler(daily_settings_menu_handler, pattern="^set_daily_menu$"))
 
     # Preview & Fill Callbacks

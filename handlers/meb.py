@@ -37,6 +37,8 @@ async def target_meb_menu_handler(update: Update, context: ContextTypes.DEFAULT_
 
     if query:
         await query.edit_message_text(text, reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)
 
 
 async def meb_select_start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -178,6 +180,8 @@ async def meb_list_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query:
         await query.edit_message_text(text, reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)
 
 
 async def sync_meb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -196,3 +200,5 @@ async def sync_meb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query:
         await query.edit_message_text(res["message"], reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(res["message"], reply_markup=keyboard)

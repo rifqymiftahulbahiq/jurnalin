@@ -73,3 +73,5 @@ async def preview_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query:
         await query.edit_message_text(text, reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)

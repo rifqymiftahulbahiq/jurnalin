@@ -21,6 +21,8 @@ async def fill_confirm_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         ])
         if query:
             await query.edit_message_text(conn_err, reply_markup=keyboard)
+        elif update.effective_chat:
+            await update.effective_chat.send_message(conn_err, reply_markup=keyboard)
         return
 
     is_meb_ok, meb_list, meb_err = validate_available_mebs(user_id)
@@ -32,6 +34,8 @@ async def fill_confirm_handler(update: Update, context: ContextTypes.DEFAULT_TYP
         ])
         if query:
             await query.edit_message_text(meb_err, reply_markup=keyboard)
+        elif update.effective_chat:
+            await update.effective_chat.send_message(meb_err, reply_markup=keyboard)
         return
 
     start_m, end_m = get_meb_target(user_id)
@@ -53,6 +57,8 @@ async def fill_confirm_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if query:
         await query.edit_message_text(text, reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)
 
 
 async def fill_execute_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -89,6 +95,8 @@ async def fill_execute_handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
     if query:
         await query.edit_message_text(text, reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)
 
 
 async def status_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -120,3 +128,5 @@ async def status_menu_handler(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     if query:
         await query.edit_message_text(text, reply_markup=keyboard)
+    elif update.effective_chat:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)

@@ -16,9 +16,12 @@ aptPkgs = [
 
 [phases.build]
 cmds = [
-    "pip install -r requirements.txt",
-    "python -m playwright install chromium"
+    "pip install --no-cache-dir -r requirements.txt",
+    "PLAYWRIGHT_BROWSERS_PATH=/ms-playwright python -m playwright install chromium"
 ]
+
+[variables]
+PLAYWRIGHT_BROWSERS_PATH = "/ms-playwright"
 
 [start]
 cmd = "python bot.py"

@@ -1,7 +1,10 @@
 import gc
 import logging
 import re
+import os
 from typing import Any, Dict
+
+os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/ms-playwright")
 
 import httpx
 from playwright.async_api import async_playwright

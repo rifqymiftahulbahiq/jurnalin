@@ -90,10 +90,15 @@ async def update_weekly_deed(
     witness_type: Optional[str] = None,
     witness_name: Optional[str] = None,
     deed_id: Optional[str] = None,
+    calendar_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Sends patch request to update weekly habit deed.
     """
+    params = {}
+    if calendar_id:
+        params["calendarId"] = str(calendar_id)
+
     payload = {
         "payloadDeed[habit_id]": str(habit_id),
         "payloadDeed[category]": str(category),
@@ -108,4 +113,4 @@ async def update_weekly_deed(
     if deed_id:
         payload["payloadDeed[deed_id]"] = str(deed_id)
 
-    return await client.patch(UPDATE_WEEKLY_ENDPOINT, data=payload)
+    return await client.patch(UPDATE_WEEKLY_ENDPOINT, data=payload, params=params if params else None)

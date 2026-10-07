@@ -47,9 +47,9 @@ class KejarClient:
                 raise SessionExpiredError("Sesi Kejar.id sudah berakhir.")
             raise
 
-    async def patch(self, path: str, data: Optional[Dict[str, Any]] = None) -> Any:
+    async def patch(self, path: str, data: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Any:
         try:
-            response = await self.client.patch(path, data=data)
+            response = await self.client.patch(path, data=data, params=params)
             if response.status_code in (401, 403):
                 raise SessionExpiredError("Sesi Kejar.id sudah berakhir.")
             response.raise_for_status()

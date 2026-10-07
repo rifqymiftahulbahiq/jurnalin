@@ -126,7 +126,8 @@ class FillService:
                                         activity_date=d_str,
                                         witness_type=w_type,
                                         witness_name=w_name,
-                                        deed_id=deed_id
+                                        deed_id=deed_id,
+                                        calendar_id=calendar_id
                                     )
                                     summary["success_count"] += 1
                                     summary["details"].append({

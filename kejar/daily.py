@@ -71,4 +71,4 @@ async def update_daily_deed(
         if cat.get("deed_id"):
             payload[f"{prefix}[deed_id]"] = str(cat["deed_id"])
 
-    return await client.patch(DAILY_BULK_UPDATE_ENDPOINT, data=payload)
+    return await client.patch(DAILY_BULK_UPDATE_ENDPOINT, data=payload, params=params)

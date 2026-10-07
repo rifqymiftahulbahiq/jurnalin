@@ -70,8 +70,15 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.callback_query.edit_message_text(text, reply_markup=main_menu_keyboard(user.id))
 
 
+from handlers.login import login_text_handler
+
+
 async def text_natural_language_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message or not update.message.text:
+        return
+
+    # Check if user is currently entering login credentials (username/password)
+    if await login_text_handler(update, context):
         return
 
     msg = update.message.text.strip()

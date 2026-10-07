@@ -14,7 +14,7 @@ from config import TELEGRAM_BOT_TOKEN
 from database import init_database
 
 from handlers.start import start_handler, text_natural_language_handler, help_handler
-from handlers.login import get_login_conversation_handler
+from handlers.login import start_login_callback, reconnect_callback, logout_callback
 from handlers.meb import (
     target_meb_menu_handler,
     meb_select_start_handler,
@@ -58,8 +58,10 @@ def build_application() -> Application:
 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # 1. Login Conversation Handler
-    app.add_handler(get_login_conversation_handler())
+    # 1. Direct Login Callbacks
+    app.add_handler(CallbackQueryHandler(start_login_callback, pattern="^menu_login$"))
+    app.add_handler(CallbackQueryHandler(reconnect_callback, pattern="^login_reconnect$"))
+    app.add_handler(CallbackQueryHandler(logout_callback, pattern="^login_logout$"))
 
     # 2. Command Handlers
     app.add_handler(CommandHandler("start", start_handler))

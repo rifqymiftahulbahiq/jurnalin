@@ -1,18 +1,12 @@
 import gc
+import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import (
-    ContextTypes,
-    ConversationHandler,
-    CommandHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    filters,
-)
+from telegram.ext import ContextTypes
 from kejar.auth import login_kejar
 from kejar.browser_session import clear_user_cookies
 from database import is_kejar_connected, get_kejar_account, set_kejar_account_connected
 
-WAITING_USERNAME, WAITING_PASSWORD = range(2)
+logger = logging.getLogger("jurnalin.login")
 
 
 async def start_login_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -40,14 +34,14 @@ async def start_login_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             await query.edit_message_text(text, reply_markup=keyboard)
         else:
             await update.effective_chat.send_message(text, reply_markup=keyboard)
-        return ConversationHandler.END
+        return
 
+    context.user_data["awaiting_input"] = "username"
     text_msg = "👤 Masukkan username / NIS / Email Kejar.id kamu:"
     if query:
         await query.edit_message_text(text_msg)
     else:
         await update.effective_chat.send_message(text_msg)
-    return WAITING_USERNAME
 
 
 async def reconnect_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -62,13 +56,13 @@ async def reconnect_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     set_kejar_account_connected(user_id, "", False)
     clear_user_cookies(user_id)
     context.user_data.clear()
+    context.user_data["awaiting_input"] = "username"
 
-    text_msg = "👤 Masukkan username / NIS / Email Kejar.id kamu:"
+    text_msg = "👤 Masukkan username / NIS / Email Kejar.id kamu yang baru:"
     if query:
         await query.edit_message_text(text_msg)
     else:
         await update.effective_chat.send_message(text_msg)
-    return WAITING_USERNAME
 
 
 async def logout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -94,98 +88,59 @@ async def logout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(text, reply_markup=keyboard)
     else:
         await update.effective_chat.send_message(text, reply_markup=keyboard)
-    return ConversationHandler.END
 
 
-async def process_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def login_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """
+    Handles username and password text inputs for login.
+    Returns True if handled, False otherwise.
+    """
     if not update.message or not update.message.text:
-        return WAITING_USERNAME
+        return False
 
-    username = update.message.text.strip()
-    context.user_data["temp_username"] = username
-
-    await update.message.reply_text(
-        "🔑 Masukkan password Kejar.id kamu:\n\n"
-        "🔒 Keamanan: Pesan password ini akan langsung dihapus otomatis setelah diterima."
-    )
-    return WAITING_PASSWORD
-
-
-async def process_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if not update.message or not update.message.text:
-        return WAITING_PASSWORD
+    state = context.user_data.get("awaiting_input")
+    if not state:
+        return False
 
     user_id = update.effective_user.id
-    username = context.user_data.get("temp_username", "")
-    password_text = update.message.text.strip()
+    text = update.message.text.strip()
 
-    # Try deleting telegram message containing password
-    try:
-        await context.bot.delete_message(
-            chat_id=update.effective_chat.id,
-            message_id=update.message.message_id
+    if state == "username":
+        context.user_data["temp_username"] = text
+        context.user_data["awaiting_input"] = "password"
+        await update.message.reply_text(
+            "🔑 Masukkan password Kejar.id kamu:\n\n"
+            "🔒 Keamanan: Pesan password ini akan langsung dihapus otomatis setelah diterima."
         )
-    except Exception:
-        pass
+        return True
 
-    msg_status = await update.effective_chat.send_message(
-        "⏳ Sedang menghubungkan ke Kejar.id..."
-    )
+    elif state == "password":
+        context.user_data.pop("awaiting_input", None)
+        username = context.user_data.get("temp_username", "")
 
-    # Perform login
-    login_result = await login_kejar(user_id, username, password_text, headless=True)
-
-    # Clear memory reference
-    del password_text
-    gc.collect()
-
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔄 Sinkron MEB", callback_data="menu_sync")],
-        [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]
-    ])
-
-    await msg_status.edit_text(login_result["message"], reply_markup=keyboard)
-    context.user_data.clear()
-    return ConversationHandler.END
-
-
-async def cancel_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data.clear()
-    if update.callback_query:
+        # Try deleting telegram message containing password
         try:
-            await update.callback_query.answer()
+            await context.bot.delete_message(
+                chat_id=update.effective_chat.id,
+                message_id=update.message.message_id
+            )
         except Exception:
             pass
-        await update.callback_query.edit_message_text(
-            "❌ Proses login dibatalkan.",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]])
-        )
-    elif update.message:
-        await update.message.reply_text(
-            "❌ Proses login dibatalkan.",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]])
-        )
-    return ConversationHandler.END
 
+        msg_status = await update.effective_chat.send_message(
+            "⏳ Sedang menghubungkan ke Kejar.id..."
+        )
 
-def get_login_conversation_handler():
-    return ConversationHandler(
-        entry_points=[
-            CallbackQueryHandler(start_login_callback, pattern="^menu_login$"),
-            CallbackQueryHandler(reconnect_callback, pattern="^login_reconnect$"),
-            CallbackQueryHandler(logout_callback, pattern="^login_logout$")
-        ],
-        states={
-            WAITING_USERNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, process_username)],
-            WAITING_PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, process_password)],
-        },
-        fallbacks=[
-            CommandHandler("cancel", cancel_login),
-            CallbackQueryHandler(cancel_login, pattern="^login_cancel$"),
-            CallbackQueryHandler(start_login_callback, pattern="^menu_login$"),
-            CallbackQueryHandler(reconnect_callback, pattern="^login_reconnect$"),
-            CallbackQueryHandler(logout_callback, pattern="^login_logout$"),
-        ],
-        allow_reentry=True,
-        per_message=False
-    )
+        # Perform login
+        login_result = await login_kejar(user_id, username, text, headless=True)
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔄 Sinkron MEB", callback_data="menu_sync")],
+            [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]
+        ])
+
+        await msg_status.edit_text(login_result["message"], reply_markup=keyboard)
+        context.user_data.clear()
+        return True
+
+    return False

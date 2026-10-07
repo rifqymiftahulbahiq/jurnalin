@@ -4,6 +4,7 @@ import logging
 from kejar.client import KejarClient, SessionExpiredError
 from kejar.weekly import get_weekly_habits, flatten_weekly_habits, update_weekly_deed, get_existing_deed
 from kejar.daily import get_daily_activities, parse_daily_response, update_daily_deed
+from kejar.signature import sign_weekly_journal_api
 from kejar.behavior import get_behavior_journal_status
 from services.planner import generate_journal_plan
 from database import get_settings, get_weekly_activity_settings, log_fill_action
@@ -220,6 +221,21 @@ class FillService:
                             "message": str(ex)
                         })
                         log_fill_action(self.telegram_id, meb_num, d_str, "DAILY", "Bulk Daily", "FAILED", str(ex))
+
+                # 3. Auto-sign completed MEB if auto_sign setting is enabled
+                if user_settings.get("auto_sign", 1) == 1 and meb["eligible_dates"]:
+                    try:
+                        sign_res = await sign_weekly_journal_api(client, calendar_id)
+                        if sign_res.get("success"):
+                            summary["details"].append({
+                                "meb": meb_num,
+                                "date": "-",
+                                "activity": "Tanda Tangan",
+                                "status": "SUCCESS",
+                                "message": "✍️ Jurnal berhasil ditandatangani."
+                            })
+                    except Exception as e_sign:
+                        logger.debug(f"Signature step exception: {e_sign}")
 
         except SessionExpiredError:
             summary["failed_count"] += 1

@@ -24,6 +24,7 @@ async def settings_menu_handler(update: Update, context: ContextTypes.DEFAULT_TY
     gender = st.get("gender", "Laki-laki")
     gender_icon = "👧 Perempuan" if gender == "Perempuan" else "👦 Laki-laki"
     haid_status = "🔴 Sedang Haid" if st.get("is_haid") else "🟢 Normal"
+    autosign = "🟢 ON" if st.get("auto_sign", 1) else "🔴 OFF"
 
     text = (
         "⚙️ PENGATURAN JURNALIN\n\n"
@@ -33,6 +34,7 @@ async def settings_menu_handler(update: Update, context: ContextTypes.DEFAULT_TY
         f"• Refleksi Mingguan: {refleksi}\n"
         f"• Status Internship / PKL: {internship}\n"
         f"• Kondisi Siswi: {haid_status}\n"
+        f"• Auto Tanda Tangan: {autosign}\n"
         f"• Saksi Mingguan: Dikonfigurasi per aktivitas\n\n"
         "Pilih kategori pengaturan di bawah:"
     )
@@ -52,6 +54,7 @@ async def settings_menu_handler(update: Update, context: ContextTypes.DEFAULT_TY
         ],
         [
             InlineKeyboardButton(f"💼 Status PKL ({internship})", callback_data="toggle_internship"),
+            InlineKeyboardButton(f"✍️ Tanda Tangan ({autosign})", callback_data="toggle_autosign"),
         ],
         [
             InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")
@@ -81,6 +84,9 @@ async def toggle_setting_callback(update: Update, context: ContextTypes.DEFAULT_
     elif query.data == "toggle_gender":
         new_val = "Perempuan" if st.get("gender") == "Laki-laki" else "Laki-laki"
         update_setting(user_id, "gender", new_val)
+    elif query.data == "toggle_autosign":
+        new_val = 0 if st.get("auto_sign", 1) else 1
+        update_setting(user_id, "auto_sign", new_val)
 
     await settings_menu_handler(update, context)
 

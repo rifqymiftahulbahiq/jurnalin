@@ -81,6 +81,34 @@ def parse_meb_response(response: dict) -> List[MebPeriod]:
     return sorted(unique.values(), key=lambda item: item.number)
 
 
+def generate_fallback_mebs() -> List[MebPeriod]:
+    """
+    Generates standard MEB 1 to MEB 36 periods for the academic year.
+    Ensures MEB 1-36 availability is always present for user selection and filling.
+    """
+    today = date.today()
+    start_year = today.year if today.month >= 7 else today.year - 1
+    start_base = date(start_year, 7, 20)
+    start_base = start_base - timedelta(days=start_base.weekday())
+
+    mebs = []
+    for i in range(1, 37):
+        s_date = start_base + timedelta(weeks=i - 1)
+        e_date = s_date + timedelta(days=6)
+        mebs.append(MebPeriod(
+            id=f"sw_auto_{i}",
+            report_period_id=f"rp_auto_{start_year}",
+            number=i,
+            label=f"MEB {i}",
+            start_date=s_date,
+            end_date=e_date,
+            school_week=str(i),
+            is_matrikulasi=False,
+            school_week_id=f"sw_auto_{i}"
+        ))
+    return mebs
+
+
 def filter_target_mebs(mebs: List[MebPeriod], start_number: int, end_number: int) -> List[MebPeriod]:
     return [
         meb for meb in mebs

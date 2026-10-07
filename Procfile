@@ -1,2 +1,3 @@
-worker: playwright install chromium && python bot.py
+worker: python bot.py
+
 

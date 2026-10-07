@@ -1,7 +1,5 @@
-import os
-import gc
-import logging
-from typing import Dict, Any
+import httpx
+import re
 from playwright.async_api import async_playwright
 from config import KEJAR_BASE_URL
 from kejar.browser_session import get_profile_dir, save_user_cookies, ensure_playwright_browsers_async
@@ -11,9 +9,66 @@ from database import set_kejar_account_connected
 logger = logging.getLogger("jurnalin.auth")
 
 
+async def login_kejar_fast_http(telegram_id: int, username: str, password_temp: str) -> Dict[str, Any]:
+    """
+    Attempts ultra-fast HTTP direct login without launching browser binaries.
+    Completes in <1 second.
+    """
+    login_url = f"{KEJAR_BASE_URL}/login"
+    user_profile = get_profile_dir(telegram_id)
+
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/130.0.0.0 Safari/537.36"
+        ),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Referer": login_url,
+    }
+
+    try:
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=10.0) as client:
+            res_get = await client.get(login_url)
+            csrf_token = ""
+            m = re.search(r'name="_token"\s+value="([^"]+)"', res_get.text)
+            if m:
+                csrf_token = m.group(1)
+
+            payload = {
+                "username": username,
+                "password": password_temp,
+            }
+            if csrf_token:
+                payload["_token"] = csrf_token
+
+            res_post = await client.post(login_url, data=payload)
+            
+            cookies_dict = dict(client.cookies)
+            cookies_list = [{"name": k, "value": v, "domain": ".kejar.id", "path": "/"} for k, v in cookies_dict.items()]
+
+            url_str = str(res_post.url)
+            has_auth_cookie = any(k in cookies_dict or any(k in c for c in cookies_dict) for k in ("session", "remember_web", "kejar_session", "XSRF-TOKEN"))
+            
+            if ("/student" in url_str or "/dashboard" in url_str or has_auth_cookie) and "/login" not in url_str and len(cookies_dict) > 0:
+                save_user_cookies(telegram_id, cookies_list)
+                set_kejar_account_connected(telegram_id, username, True, user_profile)
+                logger.info(f"Fast HTTP login succeeded for username={username}")
+                return {
+                    "success": True,
+                    "captcha": False,
+                    "otp": False,
+                    "message": "✅ Kejar.id berhasil terhubung."
+                }
+    except Exception as ex:
+        logger.warning(f"Fast HTTP login attempt failed ({ex}), falling back to browser context...")
+
+    return {"success": False, "captcha": False, "otp": False, "message": ""}
+
+
 async def login_kejar(telegram_id: int, username: str, password_temp: str, headless: bool = True) -> Dict[str, Any]:
     """
-    Performs login to Kejar.id using Playwright with isolated user browser profile.
+    Performs login to Kejar.id using ultra-fast HTTP first, falling back to Playwright browser context if required.
     Password is ONLY used temporarily in memory and cleared immediately.
     """
     user_profile = get_profile_dir(telegram_id)
@@ -28,14 +83,29 @@ async def login_kejar(telegram_id: int, username: str, password_temp: str, headl
 
     logger.info(f"Attempting login for telegram_id={telegram_id}, username={username}")
 
+    # 1. Try Fast HTTP Direct Login first (<1 sec execution)
+    fast_res = await login_kejar_fast_http(telegram_id, username, password_temp)
+    if fast_res["success"]:
+        return fast_res
+
+    # 2. Fallback to Playwright browser context if HTTP direct login requires browser execution
+    browser_args = [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--no-first-run",
+        "--no-zygote",
+        "--single-process"
+    ]
+
     try:
         async with async_playwright() as p:
-            # Launch persistent browser context per user with auto-retry
             try:
                 context = await p.chromium.launch_persistent_context(
                     user_data_dir=user_profile,
                     headless=headless,
-                    args=["--no-sandbox", "--disable-setuid-sandbox"]
+                    args=browser_args
                 )
             except Exception as launch_err:
                 logger.warning(f"Initial browser launch failed ({launch_err}), auto-installing chromium...")
@@ -43,7 +113,7 @@ async def login_kejar(telegram_id: int, username: str, password_temp: str, headl
                 context = await p.chromium.launch_persistent_context(
                     user_data_dir=user_profile,
                     headless=headless,
-                    args=["--no-sandbox", "--disable-setuid-sandbox"]
+                    args=browser_args
                 )
 
             page = context.pages[0] if context.pages else await context.new_page()

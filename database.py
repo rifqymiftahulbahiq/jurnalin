@@ -264,7 +264,10 @@ def save_user_mebs(telegram_id: int, meb_list: list):
                 school_week = excluded.school_week,
                 school_week_id = excluded.school_week_id,
                 is_matrikulasi = excluded.is_matrikulasi,
-                completion_status = excluded.completion_status,
+                completion_status = CASE 
+                    WHEN excluded.completion_status != 'BELUM LENGKAP' THEN excluded.completion_status 
+                    ELSE meb.completion_status 
+                END,
                 updated_at = CURRENT_TIMESTAMP
         """, (telegram_id, meb_id, report_period_id, meb_number, label, s_str, e_str, str(school_week), school_week_id, is_matrikulasi, completion_status))
     conn.commit()

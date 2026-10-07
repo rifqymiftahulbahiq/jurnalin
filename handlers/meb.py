@@ -155,6 +155,8 @@ async def meb_list_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 if db_status == "SUDAH LENGKAP":
                     status_str = "🟢 SUDAH LENGKAP (Telah Ditandatangani)"
+                elif db_status == "BELUM DIBUKA":
+                    status_str = "🔒 BELUM DIBUKA (Belum dibuka oleh sekolah)"
                 elif today < s_d:
                     status_str = "⏳ BELUM DIMULAI"
                 elif e_dates:

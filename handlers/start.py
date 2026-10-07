@@ -1,8 +1,19 @@
 import re
+from datetime import date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-from database import create_or_update_user, ensure_user_settings, save_meb_target, is_kejar_connected, get_kejar_account, get_meb_target
+from database import (
+    create_or_update_user,
+    ensure_user_settings,
+    save_meb_target,
+    is_kejar_connected,
+    get_kejar_account,
+    get_meb_target,
+    get_user_mebs
+)
 from services.validation import validate_target_range
+from services.sync_service import sync_kejar_data
+from services.planner import generate_journal_plan
 
 
 def main_menu_keyboard(telegram_id: int) -> InlineKeyboardMarkup:
@@ -49,7 +60,8 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🤖 JURNALIN\n\n"
         "Halo! 👋 Selamat datang di Jurnalin - Telegram Assistant untuk Kejar.id.\n\n"
         "Saya siap membantu mengelola dan mengantisipasi pengisian jurnal Pembiasaan / MEB kamu secara otomatis & aman.\n\n"
-        "Silakan pilih menu di bawah ini:"
+        "Silakan pilih menu di bawah atau ketik kalimat bebas seperti:\n"
+        "💬 'Tolong isikan jurnal harian MEB 9'"
     )
 
     if update.message:
@@ -65,30 +77,79 @@ async def text_natural_language_handler(update: Update, context: ContextTypes.DE
     msg = update.message.text.strip()
     user_id = update.effective_user.id
 
-    # Pattern: "Isi MEB X sampai MEB Y" or "MEB X - MEB Y" or "Isi MEB X hingga Y"
-    pattern = r"(?:isi\s+)?meb\s*(\d+)\s*(?:sampai|hingga|-|to)\s*(?:meb\s*)?(\d+)"
-    match = re.search(pattern, msg, re.IGNORECASE)
+    # 1. Check Range MEB: "Tolong isikan MEB 1 sampai 5" or "Isi MEB 1 - 5"
+    range_pattern = r"(?:tolong\s+)?(?:isikan|isi)\s*(?:jurnal\s+)?(?:harian\s+)?meb\s*(\d+)\s*(?:sampai|hingga|-|s/d|to)\s*(?:meb\s*)?(\d+)"
+    # 2. Check Single MEB: "Tolong isikan jurnal harian meb 9" or "Isi MEB 9"
+    single_pattern = r"(?:tolong\s+)?(?:isikan|isi)\s*(?:jurnal\s+)?(?:harian\s+)?meb\s*(\d+)"
 
-    if match:
-        start_m = int(match.group(1))
-        end_m = int(match.group(2))
+    match_range = re.search(range_pattern, msg, re.IGNORECASE)
+    match_single = re.search(single_pattern, msg, re.IGNORECASE)
 
+    start_m, end_m = None, None
+
+    if match_range:
+        start_m = int(match_range.group(1))
+        end_m = int(match_range.group(2))
+    elif match_single:
+        start_m = int(match_single.group(1))
+        end_m = start_m
+
+    if start_m is not None and end_m is not None:
         valid, err_msg = validate_target_range(start_m, end_m)
         if not valid:
             await update.message.reply_text(err_msg)
             return
 
         save_meb_target(user_id, start_m, end_m)
-        await update.message.reply_text(
-            f"🎯 Target MEB berhasil diatur: MEB {start_m} → MEB {end_m}\n\n"
-            "Tekan [👀 Preview Isi] untuk melihat pratinjau atau [✍️ Isi Jurnal] untuk melanjutkan.",
-            reply_markup=main_menu_keyboard(user_id)
-        )
+
+        # Check connection
+        if not is_kejar_connected(user_id):
+            await update.message.reply_text(
+                f"🎯 Target MEB diatur ke: MEB {start_m} → MEB {end_m}\n\n"
+                "🔐 Akun Kejar.id belum terhubung. Silakan tekan [🔐 Hubungkan Kejar.id] terlebih dahulu.",
+                reply_markup=main_menu_keyboard(user_id)
+            )
+            return
+
+        # Auto sync if database has no mebs yet
+        if not get_user_mebs(user_id):
+            await update.message.reply_text("⏳ Memulai auto-sinkronisasi MEB dari Kejar.id...")
+            await sync_kejar_data(user_id)
+
+        # Generate dry run plan
+        plan = generate_journal_plan(user_id, date.today())
+
+        target_str = f"MEB {start_m}" if start_m == end_m else f"MEB {start_m} → MEB {end_m}"
+
+        lines = [
+            "🤖 SIAP MEMPROSES PERINTAH KAMU!\n",
+            f"🎯 Target: {target_str}",
+            f"📆 Hari Eligible: {plan['total_eligible_days']} hari (<= hari ini)",
+            f"⚡ Total Action Rencana: {plan['total_planned_actions']} update\n",
+            "📋 Rincian Target:"
+        ]
+        for m in plan["mebs_detail"]:
+            e_dates = m["eligible_dates"]
+            d_str = ", ".join([d[5:] for d in e_dates]) if e_dates else "Belum ada tanggal eligible"
+            lines.append(f"• {m['label']}: Tanggal {d_str}")
+
+        lines.append("\n🚫 Jurnal Perilaku: Tidak disentuh.")
+        lines.append("\nApakah kamu ingin langsung mengisinya sekarang?")
+
+        text = "\n".join(lines)
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("✅ Ya, Langsung Isi Jurnal Sekarang", callback_data="menu_fill_execute")],
+            [InlineKeyboardButton("❌ Batal", callback_data="menu_start")]
+        ])
+
+        await update.message.reply_text(text, reply_markup=keyboard)
     else:
         await update.message.reply_text(
             "💡 Perintah tidak dikenali.\n\n"
-            "Kamu bisa mengetik seperti: 'Isi MEB 1 sampai MEB 5'\n"
-            "atau pilih menu di bawah ini:",
+            "Kamu bisa mengetik kalimat bebas seperti:\n"
+            "• 'Tolong isikan jurnal harian MEB 9'\n"
+            "• 'Isi MEB 1 sampai MEB 5'\n\n"
+            "Atau pilih menu di bawah ini:",
             reply_markup=main_menu_keyboard(user_id)
         )
 

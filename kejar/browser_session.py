@@ -48,3 +48,24 @@ def clear_user_cookies(telegram_id: int):
             os.remove(file_path)
         except Exception:
             pass
+
+
+_browsers_installed = False
+
+def ensure_playwright_browsers(force: bool = False):
+    global _browsers_installed
+    if _browsers_installed and not force:
+        return
+    try:
+        import sys
+        import subprocess
+        import logging
+        logger = logging.getLogger("jurnalin.browser")
+        logger.info("Verifying Playwright chromium browser installation...")
+        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+        _browsers_installed = True
+        logger.info("Playwright chromium browser verification complete.")
+    except Exception as ex:
+        import logging
+        logging.getLogger("jurnalin.browser").error(f"Failed to install Playwright browser: {ex}")
+

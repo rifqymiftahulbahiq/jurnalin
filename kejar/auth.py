@@ -4,7 +4,7 @@ import logging
 from typing import Dict, Any
 from playwright.async_api import async_playwright
 from config import KEJAR_BASE_URL
-from kejar.browser_session import get_profile_dir, save_user_cookies
+from kejar.browser_session import get_profile_dir, save_user_cookies, ensure_playwright_browsers
 from kejar.discovery import record_request
 from database import set_kejar_account_connected
 
@@ -30,12 +30,21 @@ async def login_kejar(telegram_id: int, username: str, password_temp: str, headl
 
     try:
         async with async_playwright() as p:
-            # Launch persistent browser context per user
-            context = await p.chromium.launch_persistent_context(
-                user_data_dir=user_profile,
-                headless=headless,
-                args=["--no-sandbox", "--disable-setuid-sandbox"]
-            )
+            # Launch persistent browser context per user with auto-retry
+            try:
+                context = await p.chromium.launch_persistent_context(
+                    user_data_dir=user_profile,
+                    headless=headless,
+                    args=["--no-sandbox", "--disable-setuid-sandbox"]
+                )
+            except Exception as launch_err:
+                logger.warning(f"Initial browser launch failed ({launch_err}), auto-installing chromium...")
+                ensure_playwright_browsers(force=True)
+                context = await p.chromium.launch_persistent_context(
+                    user_data_dir=user_profile,
+                    headless=headless,
+                    args=["--no-sandbox", "--disable-setuid-sandbox"]
+                )
 
             page = context.pages[0] if context.pages else await context.new_page()
 

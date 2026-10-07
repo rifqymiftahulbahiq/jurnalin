@@ -28,12 +28,17 @@ async def login_kejar_fast_http(telegram_id: int, username: str, password_temp: 
     }
 
     try:
-        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=10.0) as client:
+        import urllib.parse
+        async with httpx.AsyncClient(headers=headers, follow_redirects=True, timeout=12.0) as client:
             res_get = await client.get(login_url)
             csrf_token = ""
             m = re.search(r'name="_token"\s+value="([^"]+)"', res_get.text)
             if m:
                 csrf_token = m.group(1)
+
+            xsrf_cookie = client.cookies.get("XSRF-TOKEN")
+            if xsrf_cookie:
+                client.headers["X-XSRF-TOKEN"] = urllib.parse.unquote(xsrf_cookie)
 
             payload = {
                 "username": username,

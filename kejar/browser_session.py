@@ -62,10 +62,10 @@ async def ensure_playwright_browsers_async(force: bool = False):
         import asyncio
         import logging
         logger = logging.getLogger("jurnalin.browser")
-        logger.info("Verifying Playwright chromium browser installation...")
-        await asyncio.to_thread(subprocess.run, [sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+        logger.info("Verifying Playwright chromium and headless-shell installation...")
+        await asyncio.to_thread(subprocess.run, [sys.executable, "-m", "playwright", "install", "chromium", "chromium-headless-shell"], check=True)
         _browsers_installed = True
-        logger.info("Playwright chromium browser verification complete.")
+        logger.info("Playwright browser verification complete.")
     except Exception as ex:
         import logging
         logging.getLogger("jurnalin.browser").error(f"Failed to install Playwright browser: {ex}")
@@ -80,12 +80,13 @@ def ensure_playwright_browsers(force: bool = False):
         import subprocess
         import logging
         logger = logging.getLogger("jurnalin.browser")
-        logger.info("Verifying Playwright chromium browser installation...")
-        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+        logger.info("Verifying Playwright chromium and headless-shell installation...")
+        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium", "chromium-headless-shell"], check=True)
         _browsers_installed = True
-        logger.info("Playwright chromium browser verification complete.")
+        logger.info("Playwright browser verification complete.")
     except Exception as ex:
         import logging
         logging.getLogger("jurnalin.browser").error(f"Failed to install Playwright browser: {ex}")
+
 
 

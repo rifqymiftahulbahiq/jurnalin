@@ -42,6 +42,8 @@ async def login_kejar_fast_http(telegram_id: int, username: str, password_temp: 
 
             payload = {
                 "username": username,
+                "identity": username,
+                "email": username,
                 "password": password_temp,
             }
             if csrf_token:
@@ -66,21 +68,19 @@ async def login_kejar_fast_http(telegram_id: int, username: str, password_temp: 
                     "message": "✅ Kejar.id berhasil terhubung."
                 }
 
-            # 2. Check for invalid credentials in body text
-            body_text = res_post.text.lower()
-            if any(err in body_text for err in ("salah", "tidak cocok", "invalid", "credential", "gagal")):
-                set_kejar_account_connected(telegram_id, username, False, user_profile)
-                logger.info(f"Fast HTTP login rejected invalid credentials for username={username}")
-                return {
-                    "success": False,
-                    "captcha": False,
-                    "otp": False,
-                    "message": "❌ Login gagal. Periksa username dan password kamu."
-                }
+            # 2. Login failed or stayed on login page
+            set_kejar_account_connected(telegram_id, username, False, user_profile)
+            logger.info(f"Fast HTTP login rejected or remained on login page for username={username}")
+            return {
+                "success": False,
+                "captcha": False,
+                "otp": False,
+                "message": "❌ Login gagal. Periksa username dan password kamu."
+            }
     except Exception as ex:
-        logger.warning(f"Fast HTTP login attempt failed ({ex}), falling back to browser context...")
+        logger.warning(f"Fast HTTP login attempt failed ({ex})")
 
-    return {"success": False, "captcha": False, "otp": False, "message": ""}
+    return {"success": False, "captcha": False, "otp": False, "message": "❌ Gagal menghubungkan ke Kejar.id."}
 
 
 async def login_kejar(telegram_id: int, username: str, password_temp: str, headless: bool = True) -> Dict[str, Any]:

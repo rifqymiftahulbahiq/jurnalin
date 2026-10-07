@@ -21,15 +21,12 @@ async def settings_menu_handler(update: Update, context: ContextTypes.DEFAULT_TY
     puasa = st.get("puasa_sunnah", "Melaksanakan 2 hari")
     refleksi = "🟢 ON" if st.get("refleksi_mingguan") else "🔴 OFF"
     internship = "🟢 YA (PKL)" if st.get("is_internship") else "🔴 TIDAK"
-    gender = st.get("gender", "Laki-laki")
-    gender_icon = "👧 Perempuan" if gender == "Perempuan" else "👦 Laki-laki"
     haid_status = "🔴 Sedang Haid" if st.get("is_haid") else "🟢 Normal"
     autosign = "🟢 ON" if st.get("auto_sign", 1) else "🔴 OFF"
 
     text = (
         "⚙️ PENGATURAN JURNALIN\n\n"
         "Sesuaikan preferensi pengisian jurnal kamu:\n\n"
-        f"• Jenis Kelamin: {gender_icon}\n"
         f"• Puasa Sunnah: {puasa}\n"
         f"• Refleksi Mingguan: {refleksi}\n"
         f"• Status Internship / PKL: {internship}\n"
@@ -41,19 +38,18 @@ async def settings_menu_handler(update: Update, context: ContextTypes.DEFAULT_TY
 
     keyboard = InlineKeyboardMarkup([
         [
-            InlineKeyboardButton(f"👤 Gender: {gender_icon}", callback_data="toggle_gender"),
             InlineKeyboardButton(f"🚺 Kondisi: {haid_status}", callback_data="toggle_haid"),
+            InlineKeyboardButton(f"🌙 Puasa ({puasa[:8]}...)", callback_data="set_puasa_menu"),
         ],
         [
             InlineKeyboardButton("🕌 Pembiasaan Harian", callback_data="set_daily_menu"),
             InlineKeyboardButton("📆 Pembiasaan Mingguan", callback_data="set_weekly_menu"),
         ],
         [
-            InlineKeyboardButton(f"🌙 Puasa ({puasa[:8]}...)", callback_data="set_puasa_menu"),
             InlineKeyboardButton(f"📝 Refleksi ({refleksi})", callback_data="toggle_refleksi"),
+            InlineKeyboardButton(f"💼 Status PKL ({internship})", callback_data="toggle_internship"),
         ],
         [
-            InlineKeyboardButton(f"💼 Status PKL ({internship})", callback_data="toggle_internship"),
             InlineKeyboardButton(f"✍️ Tanda Tangan ({autosign})", callback_data="toggle_autosign"),
         ],
         [
@@ -81,9 +77,6 @@ async def toggle_setting_callback(update: Update, context: ContextTypes.DEFAULT_
     elif query.data == "toggle_haid":
         new_val = 0 if st.get("is_haid") else 1
         update_setting(user_id, "is_haid", new_val)
-    elif query.data == "toggle_gender":
-        new_val = "Perempuan" if st.get("gender") == "Laki-laki" else "Laki-laki"
-        update_setting(user_id, "gender", new_val)
     elif query.data == "toggle_autosign":
         new_val = 0 if st.get("auto_sign", 1) else 1
         update_setting(user_id, "auto_sign", new_val)

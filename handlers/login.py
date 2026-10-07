@@ -43,21 +43,36 @@ async def start_login_callback(update: Update, context: ContextTypes.DEFAULT_TYP
 
 async def reconnect_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
-    await query.edit_message_text(
-        "👤 Masukkan username / NIS / Email Kejar.id kamu:"
-    )
+    if query:
+        try:
+            await query.answer()
+        except Exception:
+            pass
+
+    user_id = update.effective_user.id
+    set_kejar_account_connected(user_id, "", False)
+    clear_user_cookies(user_id)
+    context.user_data.clear()
+
+    if query:
+        await query.edit_message_text(
+            "👤 Masukkan username / NIS / Email Kejar.id kamu:"
+        )
     return WAITING_USERNAME
 
 
 async def logout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     if query:
-        await query.answer()
+        try:
+            await query.answer()
+        except Exception:
+            pass
 
     user_id = update.effective_user.id
     set_kejar_account_connected(user_id, "", False)
     clear_user_cookies(user_id)
+    context.user_data.clear()
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🔐 Hubungkan Akun Baru", callback_data="menu_login")],
@@ -102,7 +117,7 @@ async def process_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     msg_status = await update.effective_chat.send_message(
-        "⏳ Sedang menghubungkan ke Kejar.id via browser session..."
+        "⏳ Sedang menghubungkan ke Kejar.id..."
     )
 
     # Perform login
@@ -125,7 +140,10 @@ async def process_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def cancel_login(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     if update.callback_query:
-        await update.callback_query.answer()
+        try:
+            await update.callback_query.answer()
+        except Exception:
+            pass
         await update.callback_query.edit_message_text(
             "❌ Proses login dibatalkan.",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]])
@@ -153,5 +171,6 @@ def get_login_conversation_handler():
             CommandHandler("cancel", cancel_login),
             CallbackQueryHandler(cancel_login, pattern="^login_cancel$")
         ],
+        allow_reentry=True,
         per_message=False
     )

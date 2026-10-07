@@ -9,6 +9,7 @@ from telegram.ext import (
     filters,
 )
 from kejar.auth import login_kejar
+from kejar.browser_session import clear_user_cookies
 from database import is_kejar_connected, get_kejar_account, set_kejar_account_connected
 
 WAITING_USERNAME, WAITING_PASSWORD = range(2)
@@ -24,10 +25,11 @@ async def start_login_callback(update: Update, context: ContextTypes.DEFAULT_TYP
         u_name = acc.get("username", "") if acc else ""
         text = (
             f"✅ Akun Kejar.id kamu ({u_name}) sudah terhubung.\n\n"
-            "Apakah kamu ingin menghubungkan ulang dengan akun lain?"
+            "Pilih opsi di bawah ini:"
         )
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔄 Hubungkan Ulang", callback_data="login_reconnect")],
+            [InlineKeyboardButton("🔄 Hubungkan Ulang (Ganti Akun)", callback_data="login_reconnect")],
+            [InlineKeyboardButton("🚪 Logout / Putuskan Akun", callback_data="login_logout")],
             [InlineKeyboardButton("⬅️ Kembali", callback_data="menu_start")]
         ])
         await query.edit_message_text(text, reply_markup=keyboard)
@@ -46,6 +48,26 @@ async def reconnect_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
         "👤 Masukkan username / NIS / Email Kejar.id kamu:"
     )
     return WAITING_USERNAME
+
+
+async def logout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    if query:
+        await query.answer()
+
+    user_id = update.effective_user.id
+    set_kejar_account_connected(user_id, "", False)
+    clear_user_cookies(user_id)
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔐 Hubungkan Akun Baru", callback_data="menu_login")],
+        [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]
+    ])
+
+    text = "🚪 Akun Kejar.id berhasil dikeluarkan / diputuskan."
+    if query:
+        await query.edit_message_text(text, reply_markup=keyboard)
+    return ConversationHandler.END
 
 
 async def process_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -120,7 +142,8 @@ def get_login_conversation_handler():
     return ConversationHandler(
         entry_points=[
             CallbackQueryHandler(start_login_callback, pattern="^menu_login$"),
-            CallbackQueryHandler(reconnect_callback, pattern="^login_reconnect$")
+            CallbackQueryHandler(reconnect_callback, pattern="^login_reconnect$"),
+            CallbackQueryHandler(logout_callback, pattern="^login_logout$")
         ],
         states={
             WAITING_USERNAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, process_username)],

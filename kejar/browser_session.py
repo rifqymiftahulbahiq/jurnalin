@@ -39,3 +39,12 @@ def get_user_cookies_dict(telegram_id: int) -> Dict[str, str]:
 def has_saved_session(telegram_id: int) -> bool:
     cookies = get_user_cookies_dict(telegram_id)
     return len(cookies) > 0
+
+
+def clear_user_cookies(telegram_id: int):
+    file_path = get_cookies_file(telegram_id)
+    if os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except Exception:
+            pass

@@ -142,6 +142,7 @@ def init_database():
     add_column_if_missing(cursor, "settings", "refleksi_mingguan", "INTEGER DEFAULT 0")
     add_column_if_missing(cursor, "settings", "is_internship", "INTEGER DEFAULT 0")
     add_column_if_missing(cursor, "settings", "is_haid", "INTEGER DEFAULT 0")
+    add_column_if_missing(cursor, "settings", "gender", "TEXT DEFAULT 'Laki-laki'")
 
     # 8. Action Fill Logs
     cursor.execute("""
@@ -326,7 +327,7 @@ def get_settings(telegram_id: int) -> dict:
 
 
 def update_setting(telegram_id: int, field: str, value):
-    allowed = {"puasa_sunnah", "refleksi_mingguan", "is_internship", "is_haid"}
+    allowed = {"puasa_sunnah", "refleksi_mingguan", "is_internship", "is_haid", "gender"}
     if field not in allowed:
         return
     ensure_user_settings(telegram_id)

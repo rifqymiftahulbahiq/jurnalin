@@ -73,6 +73,7 @@ class FillService:
         weekly_settings = get_weekly_activity_settings(self.telegram_id)
         is_internship = bool(user_settings.get("is_internship", 0))
         is_haid = bool(user_settings.get("is_haid", 0))
+        is_female = (user_settings.get("gender") == "Perempuan") or is_haid
 
         try:
             for meb in plan["mebs_detail"]:
@@ -99,8 +100,8 @@ class FillService:
                             if act_set.get("enabled") == 0:
                                 continue
 
-                            # Handle Sholat Jumat for female / haid
-                            if "sholat jumat" in h_name.lower() and is_haid:
+                            # Exclude Sholat Jumat for female students
+                            if "sholat jumat" in h_name.lower() and is_female:
                                 continue
 
                             # Choose best category

@@ -14,5 +14,11 @@ PROFILES_DIR = os.getenv("PROFILES_DIR", str(BASE_DIR / "kejar_profiles"))
 
 KEJAR_BASE_URL = os.getenv("KEJAR_BASE_URL", "https://app.kejar.id")
 
-# Create profiles directory if it doesn't exist
+# Ensure Playwright browser binary path is stored inside the application workspace
+PLAYWRIGHT_BROWSERS_PATH = os.getenv("PLAYWRIGHT_BROWSERS_PATH", str(BASE_DIR / ".ms-playwright"))
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = PLAYWRIGHT_BROWSERS_PATH
+
+# Create directories if they don't exist
 os.makedirs(PROFILES_DIR, exist_ok=True)
+os.makedirs(PLAYWRIGHT_BROWSERS_PATH, exist_ok=True)
+

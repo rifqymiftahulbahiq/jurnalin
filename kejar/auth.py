@@ -47,10 +47,10 @@ async def login_kejar_fast_http(telegram_id: int, username: str, password_temp: 
             cookies_dict = dict(client.cookies)
             cookies_list = [{"name": k, "value": v, "domain": ".kejar.id", "path": "/"} for k, v in cookies_dict.items()]
 
-            url_str = str(res_post.url)
-            has_auth_cookie = any(k in cookies_dict or any(k in c for c in cookies_dict) for k in ("session", "remember_web", "kejar_session", "XSRF-TOKEN"))
+            url_str = str(res_post.url).lower()
             
-            if ("/student" in url_str or "/dashboard" in url_str or has_auth_cookie) and "/login" not in url_str and len(cookies_dict) > 0:
+            # 1. Successful redirect away from /login
+            if ("/student" in url_str or "/dashboard" in url_str or "home" in url_str) and "/login" not in url_str:
                 save_user_cookies(telegram_id, cookies_list)
                 set_kejar_account_connected(telegram_id, username, True, user_profile)
                 logger.info(f"Fast HTTP login succeeded for username={username}")
@@ -59,6 +59,18 @@ async def login_kejar_fast_http(telegram_id: int, username: str, password_temp: 
                     "captcha": False,
                     "otp": False,
                     "message": "✅ Kejar.id berhasil terhubung."
+                }
+
+            # 2. Check for invalid credentials in body text
+            body_text = res_post.text.lower()
+            if any(err in body_text for err in ("salah", "tidak cocok", "invalid", "credential", "gagal")):
+                set_kejar_account_connected(telegram_id, username, False, user_profile)
+                logger.info(f"Fast HTTP login rejected invalid credentials for username={username}")
+                return {
+                    "success": False,
+                    "captcha": False,
+                    "otp": False,
+                    "message": "❌ Login gagal. Periksa username dan password kamu."
                 }
     except Exception as ex:
         logger.warning(f"Fast HTTP login attempt failed ({ex}), falling back to browser context...")
@@ -85,7 +97,7 @@ async def login_kejar(telegram_id: int, username: str, password_temp: str, headl
 
     # 1. Try Fast HTTP Direct Login first (<1 sec execution)
     fast_res = await login_kejar_fast_http(telegram_id, username, password_temp)
-    if fast_res["success"]:
+    if fast_res.get("message"):
         return fast_res
 
     # 2. Fallback to Playwright browser context if HTTP direct login requires browser execution

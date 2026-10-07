@@ -1,0 +1,24 @@
+{
+    "status": "success",
+    "data": [
+        {
+            "key": "salat_subuh",
+            "name": "Salat Subuh",
+            "category": "KEAGAMAAN",
+            "deedable_id": "deedable_subuh_01",
+            "deed": {
+                "id": "deed_daily_010",
+                "do": "true"
+            },
+            "options": ["Ya", "Tidak", "Berjamaah"]
+        },
+        {
+            "key": "zikir_pagi",
+            "name": "Zikir Pagi",
+            "category": "KEAGAMAAN",
+            "deedable_id": "deedable_zikir_01",
+            "deed": null,
+            "options": ["Ya", "Tidak"]
+        }
+    ]
+}

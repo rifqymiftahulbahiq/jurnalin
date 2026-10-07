@@ -1,0 +1,35 @@
+{
+    "previous_school_week": {
+        "id": "sw_prev_008",
+        "report_period_id": "rp_2026_01",
+        "year": "2026",
+        "week": "39",
+        "start_date": "2026-09-21T00:00:00.000000Z",
+        "end_date": "2026-09-27T00:00:00.000000Z",
+        "label": "MEB 8",
+        "order": 8,
+        "is_matrikulasi": false
+    },
+    "current_school_week": {
+        "id": "sw_curr_009",
+        "report_period_id": "rp_2026_01",
+        "year": "2026",
+        "week": "40",
+        "start_date": "2026-09-28T00:00:00.000000Z",
+        "end_date": "2026-10-04T00:00:00.000000Z",
+        "label": "MEB 9",
+        "order": 9,
+        "is_matrikulasi": false
+    },
+    "next_school_week": {
+        "id": "sw_next_010",
+        "report_period_id": "rp_2026_01",
+        "year": "2026",
+        "week": "42",
+        "start_date": "2026-10-12T00:00:00.000000Z",
+        "end_date": "2026-10-18T00:00:00.000000Z",
+        "label": "MEB 10",
+        "order": 10,
+        "is_matrikulasi": false
+    }
+}

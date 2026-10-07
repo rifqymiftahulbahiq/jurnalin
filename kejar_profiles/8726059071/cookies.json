@@ -1,0 +1,52 @@
+[
+  {
+    "name": "cf_clearance",
+    "value": "kCm4xRl8pCph5Of8ROjjqYT50sEQWdYqTgHmCFs91MI-1791279482-1.2.1.1-C5uQe1K2jpqSZMLI7H01hpEg9L.utd7cwtCwirkvXH5v5PyXYvoGqbshtJkPO1ASNX_wx_Xsnxqn16M8jlv.oS3cwnmBDmYIcI1.NkcHbUu5VASNtJQRdfyaCJ12iGUOkb5cYGpRGrfL603w6TR7SRRBO2442Jd14axgN0VeIZmAbeB7XHMHehxzT1vYH.CoAFd_prFU7C0mGXHOlDc9VdfAjjWpf3g2DNyY1eex7o6I6.c29nptMzD_F65WikU3ApwacMScp3S2Lj6ULz1v1nVLLbr4QjlvYhyVcf0RnsXpBh7lvnEJNZNI49g4OciRugIHMBJznjNl7gIbofu7vZnWot2ep.bJSDsg4qvaTp28DF1KkJ68AiBK6f3NjfrFinnSwanbhWktGVeaXhYMYw",
+    "domain": ".kejar.id",
+    "path": "/",
+    "expires": 1822815484.850458,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "None"
+  },
+  {
+    "name": "_ga",
+    "value": "GA1.1.842099802.1791279490",
+    "domain": ".kejar.id",
+    "path": "/",
+    "expires": 1825839636.811439,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_ga_LWJBTHGZ7D",
+    "value": "GS2.1.s1791279490$o1$g1$t1791279636$j60$l0$h0",
+    "domain": ".kejar.id",
+    "path": "/",
+    "expires": 1825839636.811011,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "XSRF-TOKEN",
+    "value": "eyJpdiI6IkN3L2FZZDUzQkhFbC9YYXZWL2hKelE9PSIsInZhbHVlIjoiT1p5QkwyaVBwcnpCWUliald5UDF0NlJncnN3RVNxQnlwWWZYcWxlZnhoTGtUMUF0VTNqanFIb3hUOE9Xa3huVnlWTlhWRXE2aDBpUENEQmwvNitFbkNaT0p3VVVWVnJ5Wnh1eFAvRWY1RHJ0aHkvRUtEVW9uRG1jVUlHdDZ6Yk0iLCJtYWMiOiJlYjdlMTMxNmQ1OTM5MTJlYmUwZjUwMmIxY2MyOGRiN2ZhMzU1MWMwMTc0MTAwMjllMTEyYWQ4OGIwZWE0MjRjIiwidGFnIjoiIn0%3D",
+    "domain": "app.kejar.id",
+    "path": "/",
+    "expires": 1791316040.678407,
+    "httpOnly": false,
+    "secure": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "matrikulasi_session",
+    "value": "eyJpdiI6IjVBSDFpV00vbTRoNm1ET2FwWmtCSWc9PSIsInZhbHVlIjoiK1hSNlYvWHViSzcxVU5BYWN5VzFwRHJ4bE5WK201UjZ5WXJPcXExRnI2WU8yZFZuM0NFa1RWOE53T2I3NlI3TXpkWDBCdTNqU1BNMmxJek13bkJDZEx5ekV4QXk2K3RveS8vcytjVVExdi9NY0drV3ZLU1JTcjdoNFlDYkR3YVAiLCJtYWMiOiI1MGJmMzE5NTVlM2FkNTg3NTkwMjQ0MGU0OGI5NjlhMmU3ZDU5YjQxZDEwNTJhMjZhYzEzZWM1ZmVhY2E2YzRhIiwidGFnIjoiIn0%3D",
+    "domain": "app.kejar.id",
+    "path": "/",
+    "expires": 1791316040.678623,
+    "httpOnly": true,
+    "secure": false,
+    "sameSite": "Lax"
+  }
+]

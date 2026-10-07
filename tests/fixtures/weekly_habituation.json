@@ -1,0 +1,55 @@
+{
+    "status": "success",
+    "data": {
+        "SPIRIT": [
+            {
+                "id": "h_spirit_01",
+                "habit": "Sholat Jumat",
+                "details": [
+                    { "type": "doing", "point": 1, "category": "Melaksanakan" },
+                    { "type": "undone", "point": 0, "category": "Tidak melaksanakan" }
+                ],
+                "type": "WEEKLY",
+                "subtype": "HABIT",
+                "activity_type": "SCHOOL",
+                "default_schedule_day": "FRIDAY",
+                "show_for_internship": true,
+                "deeds": {
+                    "2026-10-02": [
+                        { "id": "deed_weekly_001", "category": "Melaksanakan", "point": 1 }
+                    ]
+                }
+            }
+        ],
+        "BODY": [
+            {
+                "id": "h_body_01",
+                "habit": "Aktivitas Fisik",
+                "details": [
+                    { "type": "doing", "point": 1, "category": "Melaksanakan" }
+                ],
+                "type": "WEEKLY",
+                "subtype": "HABIT",
+                "activity_type": "SCHOOL",
+                "default_schedule_day": "SATURDAY",
+                "show_for_internship": true,
+                "deeds": {}
+            }
+        ],
+        "MIND": [
+            {
+                "id": "h_mind_01",
+                "habit": "Membaca Buku non-pelajaran",
+                "details": [
+                    { "type": "doing", "point": 1, "category": "Melaksanakan" }
+                ],
+                "type": "WEEKLY",
+                "subtype": "HABIT",
+                "activity_type": "SCHOOL",
+                "default_schedule_day": "SUNDAY",
+                "show_for_internship": false,
+                "deeds": {}
+            }
+        ]
+    }
+}

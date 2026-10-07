@@ -1,0 +1,140 @@
+import os
+import gc
+import logging
+from typing import Dict, Any
+from playwright.async_api import async_playwright
+from config import KEJAR_BASE_URL
+from kejar.browser_session import get_profile_dir, save_user_cookies
+from kejar.discovery import record_request
+from database import set_kejar_account_connected
+
+logger = logging.getLogger("jurnalin.auth")
+
+
+async def login_kejar(telegram_id: int, username: str, password_temp: str, headless: bool = True) -> Dict[str, Any]:
+    """
+    Performs login to Kejar.id using Playwright with isolated user browser profile.
+    Password is ONLY used temporarily in memory and cleared immediately.
+    """
+    user_profile = get_profile_dir(telegram_id)
+    login_url = f"{KEJAR_BASE_URL}/login"
+
+    result = {
+        "success": False,
+        "captcha": False,
+        "otp": False,
+        "message": ""
+    }
+
+    logger.info(f"Attempting login for telegram_id={telegram_id}, username={username}")
+
+    try:
+        async with async_playwright() as p:
+            # Launch persistent browser context per user
+            context = await p.chromium.launch_persistent_context(
+                user_data_dir=user_profile,
+                headless=headless,
+                args=["--no-sandbox", "--disable-setuid-sandbox"]
+            )
+
+            page = context.pages[0] if context.pages else await context.new_page()
+
+            # Attach Network Discovery Listener
+            async def handle_request(req):
+                if "/student/" in req.url:
+                    try:
+                        post_data = req.post_data_json if req.post_data else None
+                        record_request(
+                            method=req.method,
+                            url=req.url,
+                            query_params=dict(req.headers),
+                            payload=post_data,
+                            status_code=200
+                        )
+                    except Exception:
+                        pass
+
+            page.on("request", handle_request)
+            await page.goto(login_url, wait_until="networkidle", timeout=30000)
+
+            # Check if already logged in / redirected to dashboard
+            if "/student" in page.url or "/dashboard" in page.url:
+                cookies = await context.cookies()
+                save_user_cookies(telegram_id, cookies)
+                set_kejar_account_connected(telegram_id, username, True, user_profile)
+                await context.close()
+                result["success"] = True
+                result["message"] = "✅ Kejar.id berhasil terhubung."
+                return result
+
+            # Fill username & password
+            username_input = page.locator("input[name='username'], input[type='text'], input[name='email']").first
+            password_input = page.locator("input[name='password'], input[type='password']").first
+
+            if await username_input.is_visible() and await password_input.is_visible():
+                await username_input.fill(username)
+                await password_input.fill(password_temp)
+
+                # Submit form
+                submit_btn = page.locator("button[type='submit'], input[type='submit']").first
+                if await submit_btn.is_visible():
+                    await submit_btn.click()
+                else:
+                    await password_input.press("Enter")
+
+                await page.wait_for_timeout(3000)
+
+            # Check for CAPTCHA
+            captcha_frame = page.locator("iframe[src*='recaptcha'], iframe[src*='hcaptcha'], iframe[src*='turnstile']")
+            if await captcha_frame.count() > 0 or "captcha" in (await page.content()).lower():
+                result["captcha"] = True
+                result["message"] = (
+                    "⚠️ Kejar.id meminta CAPTCHA.\n"
+                    "Silakan selesaikan CAPTCHA di browser yang terbuka.\n"
+                    "Setelah selesai, kembali ke Telegram dan tekan:\n"
+                    "[🔄 Sinkron MEB]"
+                )
+                await context.close()
+                return result
+
+            # Check for OTP
+            if "otp" in (await page.content()).lower() or "verifikasi" in (await page.content()).lower():
+                result["otp"] = True
+                result["message"] = (
+                    "⚠️ Kejar.id meminta kode OTP.\n"
+                    "Silakan masukkan kode OTP di browser yang terbuka.\n"
+                    "Setelah selesai, kembali ke Telegram dan tekan:\n"
+                    "[🔄 Sinkron MEB]"
+                )
+                await context.close()
+                return result
+
+            # Wait for redirection to logged-in state
+            try:
+                await page.wait_for_url(lambda url: "/login" not in url, timeout=10000)
+            except Exception:
+                pass
+
+            # Save session cookies if login succeeded
+            cookies = await context.cookies()
+            save_user_cookies(telegram_id, cookies)
+
+            if "/login" not in page.url or any(c["name"] in ("session", "remember_web", "XSRF-TOKEN") for c in cookies):
+                set_kejar_account_connected(telegram_id, username, True, user_profile)
+                result["success"] = True
+                result["message"] = "✅ Kejar.id berhasil terhubung."
+            else:
+                set_kejar_account_connected(telegram_id, username, False, user_profile)
+                result["message"] = "❌ Login gagal. Periksa username dan password kamu."
+
+            await context.close()
+
+    except Exception as e:
+        logger.error(f"Login error for telegram_id={telegram_id}: {str(e)}")
+        result["message"] = f"⚠️ Terjadi kesalahan saat login: {str(e)}"
+    finally:
+        # Clear password reference in memory
+        del password_temp
+        gc.collect()
+
+    return result

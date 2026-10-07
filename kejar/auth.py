@@ -10,6 +10,7 @@ from config import KEJAR_BASE_URL
 from kejar.browser_session import (
     get_profile_dir,
     save_user_cookies,
+    clear_user_cookies,
     ensure_playwright_browsers_async,
 )
 from kejar.discovery import record_request
@@ -178,6 +179,8 @@ async def login_kejar(
     2. If HTTP login does not succeed, fall back to Playwright.
     3. Save cookies/session after successful login.
     """
+    # Always ensure a clean slate for new login attempt
+    clear_user_cookies(telegram_id)
     user_profile = get_profile_dir(telegram_id)
     login_url = f"{KEJAR_BASE_URL}/login"
 
@@ -317,35 +320,15 @@ async def login_kejar(
                 )
 
             # -------------------------------------------------
-            # CHECK EXISTING SESSION
+            # CHECK EXISTING SESSION (Ensure clean state for target username)
             # -------------------------------------------------
             if (
                 "/student" in page.url
                 or "/dashboard" in page.url
             ):
-                cookies = await context.cookies()
-
-                save_user_cookies(
-                    telegram_id,
-                    cookies,
-                )
-
-                set_kejar_account_connected(
-                    telegram_id,
-                    username,
-                    True,
-                    user_profile,
-                )
-
-                result["success"] = True
-                result["message"] = (
-                    "✅ Kejar.id berhasil terhubung."
-                )
-
-                await context.close()
-                context = None
-
-                return result
+                logger.info("Found residual session; clearing context cookies and returning to login page...")
+                await context.clear_cookies()
+                await page.goto(login_url, wait_until="domcontentloaded", timeout=15000)
 
             # -------------------------------------------------
             # FIND LOGIN INPUTS

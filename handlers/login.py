@@ -4,7 +4,8 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 from kejar.auth import login_kejar
 from kejar.browser_session import clear_user_cookies
-from database import is_kejar_connected, get_kejar_account, set_kejar_account_connected
+from database import is_kejar_connected, get_kejar_account, set_kejar_account_connected, clear_user_database_data
+from services.sync_service import sync_kejar_data
 
 logger = logging.getLogger("jurnalin.login")
 
@@ -53,7 +54,7 @@ async def reconnect_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
             pass
 
     user_id = update.effective_user.id
-    set_kejar_account_connected(user_id, "", False)
+    clear_user_database_data(user_id)
     clear_user_cookies(user_id)
     context.user_data.clear()
     context.user_data["awaiting_input"] = "username"
@@ -74,7 +75,7 @@ async def logout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
 
     user_id = update.effective_user.id
-    set_kejar_account_connected(user_id, "", False)
+    clear_user_database_data(user_id)
     clear_user_cookies(user_id)
     context.user_data.clear()
 
@@ -131,8 +132,16 @@ async def login_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "⏳ Sedang menghubungkan ke Kejar.id..."
         )
 
+        # Clear old account data before logging in new account
+        clear_user_database_data(user_id)
+        clear_user_cookies(user_id)
+
         # Perform login
         login_result = await login_kejar(user_id, username, text, headless=True)
+
+        if login_result.get("success"):
+            # Auto-sync data for the newly connected account
+            await sync_kejar_data(user_id)
 
         keyboard = InlineKeyboardMarkup([
             [InlineKeyboardButton("🔄 Sinkron MEB", callback_data="menu_sync")],
@@ -142,5 +151,7 @@ async def login_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await msg_status.edit_text(login_result["message"], reply_markup=keyboard)
         context.user_data.clear()
         return True
+
+    return False
 
     return False

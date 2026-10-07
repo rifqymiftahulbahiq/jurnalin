@@ -41,13 +41,25 @@ def has_saved_session(telegram_id: int) -> bool:
     return len(cookies) > 0
 
 
+import shutil
+
 def clear_user_cookies(telegram_id: int):
-    file_path = get_cookies_file(telegram_id)
-    if os.path.exists(file_path):
+    profile_dir = get_profile_dir(telegram_id)
+    if os.path.exists(profile_dir):
         try:
-            os.remove(file_path)
+            shutil.rmtree(profile_dir)
         except Exception:
-            pass
+            for item in os.listdir(profile_dir):
+                item_path = os.path.join(profile_dir, item)
+                try:
+                    if os.path.isdir(item_path):
+                        shutil.rmtree(item_path)
+                    else:
+                        os.remove(item_path)
+                except Exception:
+                    pass
+    os.makedirs(profile_dir, exist_ok=True)
+
 
 
 _browsers_installed = False

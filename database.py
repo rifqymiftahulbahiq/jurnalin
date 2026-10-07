@@ -181,6 +181,18 @@ def create_or_update_user(telegram_id: int, username: str = None, first_name: st
     conn.close()
 
 
+def clear_user_database_data(telegram_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM meb WHERE telegram_id = ?", (telegram_id,))
+    cursor.execute("DELETE FROM meb_settings WHERE telegram_id = ?", (telegram_id,))
+    cursor.execute("DELETE FROM weekly_activity_settings WHERE telegram_id = ?", (telegram_id,))
+    cursor.execute("DELETE FROM daily_activity_settings WHERE telegram_id = ?", (telegram_id,))
+    cursor.execute("UPDATE kejar_accounts SET username = '', connected = 0, last_sync_at = NULL WHERE telegram_id = ?", (telegram_id,))
+    conn.commit()
+    conn.close()
+
+
 def set_kejar_account_connected(telegram_id: int, username: str, connected: bool = True, profile_path: str = None):
     conn = get_connection()
     cursor = conn.cursor()

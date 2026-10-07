@@ -17,7 +17,11 @@ WAITING_USERNAME, WAITING_PASSWORD = range(2)
 
 async def start_login_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
+    if query:
+        try:
+            await query.answer()
+        except Exception:
+            pass
 
     user_id = update.effective_user.id
     if is_kejar_connected(user_id):
@@ -32,12 +36,17 @@ async def start_login_callback(update: Update, context: ContextTypes.DEFAULT_TYP
             [InlineKeyboardButton("🚪 Logout / Putuskan Akun", callback_data="login_logout")],
             [InlineKeyboardButton("⬅️ Kembali", callback_data="menu_start")]
         ])
-        await query.edit_message_text(text, reply_markup=keyboard)
+        if query:
+            await query.edit_message_text(text, reply_markup=keyboard)
+        else:
+            await update.effective_chat.send_message(text, reply_markup=keyboard)
         return ConversationHandler.END
 
-    await query.edit_message_text(
-        "👤 Masukkan username / NIS / Email Kejar.id kamu:"
-    )
+    text_msg = "👤 Masukkan username / NIS / Email Kejar.id kamu:"
+    if query:
+        await query.edit_message_text(text_msg)
+    else:
+        await update.effective_chat.send_message(text_msg)
     return WAITING_USERNAME
 
 
@@ -54,10 +63,11 @@ async def reconnect_callback(update: Update, context: ContextTypes.DEFAULT_TYPE)
     clear_user_cookies(user_id)
     context.user_data.clear()
 
+    text_msg = "👤 Masukkan username / NIS / Email Kejar.id kamu:"
     if query:
-        await query.edit_message_text(
-            "👤 Masukkan username / NIS / Email Kejar.id kamu:"
-        )
+        await query.edit_message_text(text_msg)
+    else:
+        await update.effective_chat.send_message(text_msg)
     return WAITING_USERNAME
 
 
@@ -82,6 +92,8 @@ async def logout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = "🚪 Akun Kejar.id berhasil dikeluarkan / diputuskan."
     if query:
         await query.edit_message_text(text, reply_markup=keyboard)
+    else:
+        await update.effective_chat.send_message(text, reply_markup=keyboard)
     return ConversationHandler.END
 
 
@@ -169,7 +181,10 @@ def get_login_conversation_handler():
         },
         fallbacks=[
             CommandHandler("cancel", cancel_login),
-            CallbackQueryHandler(cancel_login, pattern="^login_cancel$")
+            CallbackQueryHandler(cancel_login, pattern="^login_cancel$"),
+            CallbackQueryHandler(start_login_callback, pattern="^menu_login$"),
+            CallbackQueryHandler(reconnect_callback, pattern="^login_reconnect$"),
+            CallbackQueryHandler(logout_callback, pattern="^login_logout$"),
         ],
         allow_reentry=True,
         per_message=False

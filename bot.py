@@ -109,7 +109,8 @@ def build_application() -> Application:
 def main():
     logger.info("Memulai Jurnalin Telegram Bot...")
     app = build_application()
-    app.run_polling(drop_pending_updates=True)
+    app.run_polling(drop_pending_updates=False)
+
 
 
 if __name__ == "__main__":

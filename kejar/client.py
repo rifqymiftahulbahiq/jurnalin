@@ -64,7 +64,20 @@ class KejarClient:
             return
 
         from playwright.async_api import async_playwright
+        from kejar.browser_session import ensure_playwright_browsers_async
+
         self._playwright = await async_playwright().start()
+
+        browser_args = [
+            "--no-sandbox",
+            "--disable-setuid-sandbox",
+            "--disable-dev-shm-usage",
+            "--disable-gpu",
+            "--no-first-run",
+            "--no-zygote",
+            "--single-process",
+            "--disable-extensions",
+        ]
 
         # Build cookie list for Playwright format
         pw_cookies = []
@@ -81,12 +94,24 @@ class KejarClient:
                 "httpOnly": c.get("httpOnly", False),
             })
 
-        # Create a browser context with the saved cookies
-        self._browser_context = await self._playwright.chromium.launch_persistent_context(
-            user_data_dir=get_profile_dir(self.telegram_id),
-            headless=True,
-            args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
-        )
+        # Try to launch browser, auto-install if missing
+        try:
+            self._browser_context = await self._playwright.chromium.launch_persistent_context(
+                user_data_dir=get_profile_dir(self.telegram_id),
+                headless=True,
+                args=browser_args,
+            )
+        except Exception as e:
+            if "Executable doesn't exist" in str(e) or "executable" in str(e).lower():
+                logger.info("Browser not found, auto-installing...")
+                await ensure_playwright_browsers_async(force=True)
+                self._browser_context = await self._playwright.chromium.launch_persistent_context(
+                    user_data_dir=get_profile_dir(self.telegram_id),
+                    headless=True,
+                    args=browser_args,
+                )
+            else:
+                raise SessionExpiredError(f"Browser tidak dapat dijalankan: {e}")
 
         # Override cookies to ensure they're fresh
         if pw_cookies:

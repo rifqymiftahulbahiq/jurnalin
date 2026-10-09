@@ -4,11 +4,6 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-# Set Playwright browser path from env (may be overridden by config.py too)
-_pw_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "")
-if _pw_path:
-    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = _pw_path
-
 import gc
 import logging
 import re
@@ -231,6 +226,7 @@ async def login_kejar(
     # ---------------------------------------------------------
     # 2. PLAYWRIGHT LOGIN
     # ---------------------------------------------------------
+    import platform
     browser_args = [
         "--no-sandbox",
         "--disable-setuid-sandbox",
@@ -238,6 +234,16 @@ async def login_kejar(
         "--disable-gpu",
         "--no-first-run",
         "--no-zygote",
+        "--single-process",          # penting untuk Linux VPS/Docker
+        "--disable-extensions",
+        "--disable-background-networking",
+        "--disable-default-apps",
+        "--disable-sync",
+        "--disable-translate",
+        "--hide-scrollbars",
+        "--metrics-recording-only",
+        "--mute-audio",
+        "--safebrowsing-disable-auto-update",
     ]
 
     context = None
@@ -255,15 +261,13 @@ async def login_kejar(
 
             except Exception as launch_err:
                 logger.warning(
-                    "Initial Playwright browser launch failed: %s",
+                    "Initial Playwright browser launch failed: %s. Auto-installing...",
                     launch_err,
                 )
 
-                # Try to install the browser once as a fallback.
+                # Auto-install browser and retry once
                 try:
-                    await ensure_playwright_browsers_async(
-                        force=True
-                    )
+                    await ensure_playwright_browsers_async(force=True)
 
                     context = await p.chromium.launch_persistent_context(
                         user_data_dir=user_profile,
@@ -272,15 +276,15 @@ async def login_kejar(
                     )
 
                 except Exception as install_err:
-                    logger.exception(
-                        "Unable to start Playwright Chromium."
-                    )
-
+                    logger.exception("Unable to start Playwright Chromium after install attempt.")
                     result["message"] = (
-                        "⚠️ Chromium Playwright tidak tersedia di server.\n"
-                        f"Detail: {install_err}"
+                        "⚠️ Browser Chromium tidak tersedia.\n\n"
+                        "Jalankan perintah berikut di server untuk install browser:\n"
+                        "<code>python -m playwright install chromium</code>\n\n"
+                        "Atau jika di Linux:\n"
+                        "<code>python -m playwright install-deps chromium && python -m playwright install chromium</code>\n\n"
+                        f"Detail error: {str(install_err)[:200]}"
                     )
-
                     return result
 
             page = (

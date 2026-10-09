@@ -14,11 +14,15 @@ PROFILES_DIR = os.getenv("PROFILES_DIR", str(BASE_DIR / "kejar_profiles"))
 
 KEJAR_BASE_URL = os.getenv("KEJAR_BASE_URL", "https://app.kejar.id")
 
-# Ensure Playwright browser binary path is stored inside the application workspace
-PLAYWRIGHT_BROWSERS_PATH = os.getenv("PLAYWRIGHT_BROWSERS_PATH", str(BASE_DIR / ".ms-playwright"))
-os.environ["PLAYWRIGHT_BROWSERS_PATH"] = PLAYWRIGHT_BROWSERS_PATH
+# Playwright browser path — only set if explicitly configured in .env
+# If not set, Playwright uses its default location per platform:
+#   Linux:   ~/.cache/ms-playwright
+#   Windows: %LOCALAPPDATA%\ms-playwright
+#   macOS:   ~/Library/Caches/ms-playwright
+_pw_path = os.getenv("PLAYWRIGHT_BROWSERS_PATH", "")
+if _pw_path:
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = _pw_path
 
-# Create directories if they don't exist
+# Ensure necessary directories exist
 os.makedirs(PROFILES_DIR, exist_ok=True)
-os.makedirs(PLAYWRIGHT_BROWSERS_PATH, exist_ok=True)
 

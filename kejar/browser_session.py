@@ -1,7 +1,14 @@
 import os
 import json
+import sys
+import subprocess
+import asyncio
+import logging
+import shutil
 from typing import Dict, List, Any
 from config import PROFILES_DIR
+
+logger = logging.getLogger("jurnalin.browser")
 
 
 def get_profile_dir(telegram_id: int) -> str:
@@ -41,8 +48,6 @@ def has_saved_session(telegram_id: int) -> bool:
     return len(cookies) > 0
 
 
-import shutil
-
 def clear_user_cookies(telegram_id: int):
     profile_dir = get_profile_dir(telegram_id)
     if os.path.exists(profile_dir):
@@ -61,44 +66,59 @@ def clear_user_cookies(telegram_id: int):
     os.makedirs(profile_dir, exist_ok=True)
 
 
+def _run_playwright_install():
+    """Install Playwright browser (chromium). Works on both Linux and Windows."""
+    try:
+        logger.info("Installing Playwright chromium browser...")
+        result = subprocess.run(
+            [sys.executable, "-m", "playwright", "install", "chromium"],
+            capture_output=True,
+            text=True,
+            timeout=300,
+        )
+        if result.returncode == 0:
+            logger.info("Playwright chromium installed successfully.")
+            return True
+        else:
+            logger.error(f"playwright install failed: {result.stderr[:300]}")
+            # Try installing deps on Linux
+            if sys.platform.startswith("linux"):
+                logger.info("Trying to install system dependencies...")
+                subprocess.run(
+                    [sys.executable, "-m", "playwright", "install-deps", "chromium"],
+                    capture_output=True,
+                    timeout=120,
+                )
+                # Retry install
+                result2 = subprocess.run(
+                    [sys.executable, "-m", "playwright", "install", "chromium"],
+                    capture_output=True,
+                    text=True,
+                    timeout=300,
+                )
+                return result2.returncode == 0
+            return False
+    except Exception as ex:
+        logger.error(f"Failed to install Playwright browser: {ex}")
+        return False
+
 
 _browsers_installed = False
+
 
 async def ensure_playwright_browsers_async(force: bool = False):
     global _browsers_installed
     if _browsers_installed and not force:
         return
-    try:
-        import sys
-        import subprocess
-        import asyncio
-        import logging
-        logger = logging.getLogger("jurnalin.browser")
-        logger.info("Verifying Playwright chromium browser installation...")
-        await asyncio.to_thread(subprocess.run, [sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+    ok = await asyncio.to_thread(_run_playwright_install)
+    if ok:
         _browsers_installed = True
-        logger.info("Playwright browser verification complete.")
-    except Exception as ex:
-        import logging
-        logging.getLogger("jurnalin.browser").error(f"Failed to install Playwright browser: {ex}")
 
 
 def ensure_playwright_browsers(force: bool = False):
     global _browsers_installed
     if _browsers_installed and not force:
         return
-    try:
-        import sys
-        import subprocess
-        import logging
-        logger = logging.getLogger("jurnalin.browser")
-        logger.info("Verifying Playwright chromium browser installation...")
-        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
+    ok = _run_playwright_install()
+    if ok:
         _browsers_installed = True
-        logger.info("Playwright browser verification complete.")
-    except Exception as ex:
-        import logging
-        logging.getLogger("jurnalin.browser").error(f"Failed to install Playwright browser: {ex}")
-
-
-

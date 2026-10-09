@@ -129,7 +129,8 @@ async def login_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             pass
 
         msg_status = await update.effective_chat.send_message(
-            "⏳ Sedang menghubungkan ke Kejar.id..."
+            "⏳ Sedang menghubungkan ke Kejar.id...\n"
+            "(Proses ini bisa memakan 30-60 detik pertama kali)"
         )
 
         # Clear old account data before logging in new account
@@ -148,7 +149,11 @@ async def login_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
             [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]
         ])
 
-        await msg_status.edit_text(login_result["message"], reply_markup=keyboard)
+        await msg_status.edit_text(
+            login_result["message"],
+            reply_markup=keyboard,
+            parse_mode="HTML",
+        )
         context.user_data.clear()
         return True
 

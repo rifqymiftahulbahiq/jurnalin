@@ -1,8 +1,8 @@
 from datetime import date, timedelta
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import logging
 from kejar.client import KejarClient, SessionExpiredError
-from kejar.meb import parse_meb_response, generate_fallback_mebs
+from kejar.meb import parse_meb_response, generate_fallback_mebs, MebPeriod, parse_kejar_date
 from kejar.weekly import get_weekly_habits, flatten_weekly_habits
 from database import (
     save_user_mebs,
@@ -12,6 +12,39 @@ from database import (
 )
 
 logger = logging.getLogger("jurnalin.sync")
+
+
+async def _discover_mebs_from_api(client: KejarClient) -> Optional[List[MebPeriod]]:
+    """
+    Tries all known endpoints to fetch real MEB/school-week data from Kejar.id.
+    Returns list of MebPeriod if found, or None if nothing works.
+    """
+    # Try endpoints in priority order
+    endpoints = [
+        "/student/school-weeks",
+        "/student/dashboard",
+        "/student/report-period",
+        "/student/journal-weekly/school-weeks",
+        "/student/journal-weekly",
+    ]
+
+    for ep in endpoints:
+        try:
+            res = await client.get(ep)
+            if not res:
+                continue
+            parsed = parse_meb_response(res)
+            if parsed:
+                logger.info(f"Got {len(parsed)} MEBs from {ep}")
+                return parsed
+            # Log what we got for debugging
+            logger.debug(f"Endpoint {ep} OK but parse returned 0 MEBs. Keys: {list(res.keys()) if isinstance(res, dict) else type(res)}")
+        except SessionExpiredError:
+            raise
+        except Exception as e:
+            logger.debug(f"Endpoint {ep} failed: {type(e).__name__}: {e}")
+
+    return None
 
 
 async def sync_meb_completion_statuses(client: KejarClient, telegram_id: int, mebs: list):
@@ -37,11 +70,14 @@ async def sync_meb_completion_statuses(client: KejarClient, telegram_id: int, me
             except Exception:
                 continue
 
-        # Skip future MEBs (start_date > today)
+        # Skip future MEBs
         if s_date > today:
             continue
 
-        # Query Kejar.id weekly habituation endpoint for past/current MEB
+        # Skip fallback MEBs — can't check without real ID
+        if str(sw_id).startswith("sw_auto_"):
+            continue
+
         try:
             resp = await get_weekly_habits(client, s_date, e_date, str(sw_id))
             if not resp or not isinstance(resp, dict):
@@ -72,7 +108,9 @@ async def sync_meb_completion_statuses(client: KejarClient, telegram_id: int, me
                     deeds = h.get("deeds", {})
                     if isinstance(deeds, dict) and deeds.get(d_str):
                         has_deeds = True
-                    elif isinstance(deeds, list) and any(isinstance(d, dict) and d.get("date") == d_str for d in deeds):
+                    elif isinstance(deeds, list) and any(
+                        isinstance(d, dict) and d.get("date") == d_str for d in deeds
+                    ):
                         has_deeds = True
                     else:
                         missing_deed = True
@@ -83,62 +121,72 @@ async def sync_meb_completion_statuses(client: KejarClient, telegram_id: int, me
             else:
                 update_meb_completion_status(telegram_id, meb_num, "BELUM LENGKAP")
 
+        except SessionExpiredError:
+            raise
         except Exception as ex:
             logger.debug(f"MEB {meb_num} status check warning: {ex}")
 
 
 async def sync_kejar_data(telegram_id: int) -> Dict[str, Any]:
     """
-    Syncs school week / MEB data and available activities from Kejar.id to SQLite database.
+    Syncs school week / MEB data from Kejar.id to SQLite database.
     """
     client = KejarClient(telegram_id)
     result = {
         "success": False,
         "message": "",
         "mebs_synced": 0,
-        "meb_list": []
+        "meb_list": [],
+        "is_fallback": False,
     }
 
     try:
-        endpoints = [
-            "/student/school-weeks",
-            "/student/dashboard",
-        ]
-
-        mebs = []
-
-        for ep in endpoints:
-            try:
-                res = await client.get(ep)
-                if res:
-                    parsed = parse_meb_response(res)
-                    if parsed:
-                        mebs = parsed
-                        break
-            except Exception as e:
-                logger.debug(f"Endpoint {ep} failed: {e}")
-                continue
+        mebs = await _discover_mebs_from_api(client)
 
         if not mebs:
+            # All API endpoints failed but session is valid — use fallback
+            logger.warning("All MEB endpoints returned no data, using fallback MEBs")
             mebs = generate_fallback_mebs()
+            result["is_fallback"] = True
 
         save_user_mebs(telegram_id, mebs)
-        
-        # Accurately sync actual completion & signature status per MEB from Kejar.id
-        await sync_meb_completion_statuses(client, telegram_id, mebs)
+
+        # Check completion status only for real MEBs
+        if not result["is_fallback"]:
+            await sync_meb_completion_statuses(client, telegram_id, mebs)
 
         update_last_sync(telegram_id)
         result["success"] = True
         result["mebs_synced"] = len(mebs)
         result["meb_list"] = mebs
-        result["message"] = f"✅ Sinkronisasi berhasil! Status kelengkapan MEB 1 s/d MEB 36 telah diperbarui dari Kejar.id."
+
+        if result["is_fallback"]:
+            result["message"] = (
+                "⚠️ DATA MEB TIDAK DAPAT DIAMBIL DARI KEJAR.ID\n\n"
+                "Bot menggunakan jadwal MEB estimasi.\n"
+                "Pengisian jurnal TIDAK AKAN BERHASIL karena calendar ID tidak real.\n\n"
+                "✅ Cara memperbaiki:\n"
+                "1. Pastikan kamu sudah login ulang ke Kejar.id\n"
+                "2. Tekan 🔐 Login / Cek Akun di bawah\n"
+                "3. Setelah login, tekan Sinkron MEB lagi"
+            )
+        else:
+            result["message"] = (
+                f"✅ Sinkronisasi berhasil!\n"
+                f"{len(mebs)} MEB tersinkron dari Kejar.id.\n"
+                "Status kelengkapan MEB telah diperbarui."
+            )
 
     except SessionExpiredError:
         set_kejar_account_connected(telegram_id, "", False)
-        result["message"] = "🔐 Sesi Kejar.id sudah berakhir. Silakan login kembali."
+        result["message"] = (
+            "🔐 SESI KEJAR.ID SUDAH BERAKHIR\n\n"
+            "Kamu perlu login ulang agar bot bisa mengakses Kejar.id.\n\n"
+            "Tekan tombol di bawah untuk login ulang."
+        )
     except Exception as e:
-        logger.error(f"Sync error for telegram_id={telegram_id}: {e}")
-        result["message"] = f"⚠️ Kejar.id tidak merespons atau error: {str(e)}"
+        logger.error(f"Sync error for telegram_id={telegram_id}: {e}", exc_info=True)
+        result["message"] = f"⚠️ Error saat sinkronisasi: {str(e)}"
     finally:
         await client.close()
 

@@ -53,6 +53,7 @@ def parse_meb_response(response: dict) -> List[MebPeriod]:
     # Unwrap data key if wrapped
     target_dict = response.get("data", response) if isinstance(response.get("data"), dict) else response
 
+    # Format 1: {previous_school_week, current_school_week, next_school_week}
     keys = ["previous_school_week", "current_school_week", "next_school_week"]
     for key in keys:
         item = target_dict.get(key)
@@ -63,8 +64,15 @@ def parse_meb_response(response: dict) -> List[MebPeriod]:
             except (KeyError, TypeError, ValueError):
                 continue
 
-    # Also handle array data if response contains list of school weeks
-    sw_list = target_dict.get("school_weeks") or response.get("school_weeks") or (response.get("data") if isinstance(response.get("data"), list) else None)
+    # Format 2: array of school weeks
+    sw_list = (
+        target_dict.get("school_weeks")
+        or response.get("school_weeks")
+        or target_dict.get("weeks")
+        or response.get("weeks")
+        or (response.get("data") if isinstance(response.get("data"), list) else None)
+        or (target_dict if isinstance(target_dict, list) else None)
+    )
     if isinstance(sw_list, list):
         for item in sw_list:
             if isinstance(item, dict):
@@ -73,6 +81,14 @@ def parse_meb_response(response: dict) -> List[MebPeriod]:
                     result.append(meb)
                 except Exception:
                     continue
+
+    # Format 3: single current week in response root
+    if not result:
+        try:
+            meb = parse_school_week(target_dict)
+            result.append(meb)
+        except Exception:
+            pass
 
     unique = {}
     for meb in result:

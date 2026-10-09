@@ -71,27 +71,50 @@ async def fill_execute_handler(update: Update, context: ContextTypes.DEFAULT_TYP
     fill_service = FillService(telegram_id=user_id, mode="REAL")
     res = await fill_service.execute_fill(date.today())
 
-    create_warn = ""
-    if res.get("unvalidated_create_warning"):
-        create_warn = (
-            "\n⚠️ Automatic CREATE belum diaktifkan karena request Kejar.id belum terbukti. "
-            "Sistem tetap aman dalam DRY_RUN / SKIP untuk item tanpa deed_id."
-        )
-
-    text = (
-        "🎉 PENGISIAN JURNAL SELESAI\n\n"
-        f"🎯 Target Range: {res['target_range']}\n\n"
-        f"✅ Berhasil: {res['success_count']}\n"
-        f"⏭️ Dilewati: {res['skipped_count']}\n"
-        f"❌ Gagal: {res['failed_count']}\n"
-        f"{create_warn}\n\n"
-        "🚫 Jurnal Perilaku: Tidak disentuh."
+    # Check if all failures are due to fallback calendar_id
+    all_fallback = (
+        res["failed_count"] > 0
+        and res["success_count"] == 0
+        and res["skipped_count"] == 0
+        and all("ID estimasi" in d.get("message", "") for d in res["details"] if d.get("status") == "FAILED")
     )
 
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📊 Lihat Status", callback_data="menu_status")],
-        [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]
-    ])
+    if all_fallback:
+        text = (
+            "⚠️ PENGISIAN GAGAL — SINKRONISASI DIPERLUKAN\n\n"
+            "Data MEB kamu belum tersinkron dengan Kejar.id.\n"
+            "Bot menggunakan ID MEB estimasi yang tidak valid untuk pengisian jurnal.\n\n"
+            "✅ Cara memperbaiki:\n"
+            "1. Tekan 🔄 Sinkron MEB di bawah\n"
+            "2. Tunggu sinkronisasi selesai\n"
+            "3. Coba isi jurnal lagi"
+        )
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔄 Sinkron MEB Sekarang", callback_data="menu_sync")],
+            [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]
+        ])
+    else:
+        create_warn = ""
+        if res.get("unvalidated_create_warning"):
+            create_warn = (
+                "\n⚠️ Automatic CREATE belum diaktifkan karena request Kejar.id belum terbukti. "
+                "Sistem tetap aman dalam DRY_RUN / SKIP untuk item tanpa deed_id."
+            )
+
+        text = (
+            "🎉 PENGISIAN JURNAL SELESAI\n\n"
+            f"🎯 Target Range: {res['target_range']}\n\n"
+            f"✅ Berhasil: {res['success_count']}\n"
+            f"⏭️ Dilewati: {res['skipped_count']}\n"
+            f"❌ Gagal: {res['failed_count']}\n"
+            f"{create_warn}\n\n"
+            "🚫 Jurnal Perilaku: Tidak disentuh."
+        )
+
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📊 Lihat Status", callback_data="menu_status")],
+            [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]
+        ])
 
     if query:
         await query.edit_message_text(text, reply_markup=keyboard)

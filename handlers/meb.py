@@ -135,7 +135,14 @@ async def meb_list_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     else:
         today = date.today()
+        # Check if data is fallback (sw_auto_*)
+        is_fallback = any(
+            str(m.get("meb_id", "") or m.get("school_week_id", "")).startswith("sw_auto_")
+            for m in mebs
+        )
         lines = ["📅 DAFTAR MEB TERSINKRON:\n"]
+        if is_fallback:
+            lines.insert(0, "⚠️ DATA ESTIMASI — Sinkronisasi ke Kejar.id gagal\nTanggal MEB di bawah adalah perkiraan, bukan data real.\nTekan Sinkron Ulang setelah pastikan login aktif.\n")
         for m in mebs:
             s_d = parse_kejar_date(m["start_date"])
             e_d = parse_kejar_date(m["end_date"])
@@ -143,7 +150,7 @@ async def meb_list_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             status_str = "❓ Tidak diketahui"
             if s_d and e_d:
                 m_obj = MebPeriod(
-                    id=m.get("kejar_id", ""),
+                    id=m.get("meb_id", ""),
                     report_period_id=m.get("report_period_id", ""),
                     number=m["meb_number"],
                     label=m.get("label", f"MEB {m['meb_number']}"),
@@ -193,10 +200,24 @@ async def sync_meb_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     res = await sync_kejar_data(user_id)
 
-    keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📅 Lihat MEB Saya", callback_data="menu_meb_list")],
-        [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]
-    ])
+    if "login" in res["message"].lower() or "sesi" in res["message"].lower():
+        # Session expired
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔐 Login Ulang", callback_data="menu_login")],
+            [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]
+        ])
+    elif res.get("is_fallback"):
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔐 Login / Cek Akun", callback_data="menu_login")],
+            [InlineKeyboardButton("🔄 Coba Sinkron Ulang", callback_data="menu_sync")],
+            [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]
+        ])
+    else:
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📅 Lihat MEB Saya", callback_data="menu_meb_list")],
+            [InlineKeyboardButton("✍️ Isi Jurnal", callback_data="menu_fill_confirm")],
+            [InlineKeyboardButton("⬅️ Menu Utama", callback_data="menu_start")]
+        ])
 
     if query:
         await query.edit_message_text(res["message"], reply_markup=keyboard)

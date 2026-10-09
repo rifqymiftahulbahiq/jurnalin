@@ -80,6 +80,22 @@ class FillService:
                 meb_num = meb["meb_number"]
                 calendar_id = meb["school_week_id"]
 
+                # Warn and skip if using fallback/auto-generated school_week_id
+                if str(calendar_id).startswith("sw_auto_"):
+                    summary["failed_count"] += 1
+                    summary["details"].append({
+                        "meb": meb_num,
+                        "date": "-",
+                        "activity": "MEB",
+                        "status": "FAILED",
+                        "message": (
+                            f"❌ MEB {meb_num} menggunakan ID estimasi (bukan dari Kejar.id).\n"
+                            "Silakan Sinkron MEB terlebih dahulu agar mendapat calendar ID yang benar."
+                        )
+                    })
+                    log_fill_action(self.telegram_id, meb_num, "-", "MEB", f"MEB {meb_num}", "FAILED", "Fallback calendar_id, sync required")
+                    continue
+
                 # 1. Fill Weekly Habits if dates are eligible
                 if meb["eligible_dates"]:
                     s_date = date.fromisoformat(meb["start_date"])

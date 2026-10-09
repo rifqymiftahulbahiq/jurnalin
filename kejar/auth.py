@@ -1,6 +1,13 @@
 import os
 
-os.environ.setdefault("PLAYWRIGHT_BROWSERS_PATH", "/ms-playwright")
+# Load env first so PLAYWRIGHT_BROWSERS_PATH from .env is picked up
+from dotenv import load_dotenv
+load_dotenv()
+
+# Set Playwright browser path from env (may be overridden by config.py too)
+_pw_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "")
+if _pw_path:
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = _pw_path
 
 import gc
 import logging
@@ -281,6 +288,20 @@ async def login_kejar(
                 if context.pages
                 else await context.new_page()
             )
+
+            # -------------------------------------------------
+            # FORCE HTTPS — Kejar.id sometimes redirects http→https
+            # which causes ERR_EMPTY_RESPONSE in Playwright
+            # -------------------------------------------------
+            async def force_https(route, request):
+                url = request.url
+                if url.startswith("http://app.kejar.id"):
+                    new_url = "https://app.kejar.id" + url[len("http://app.kejar.id"):]
+                    await route.continue_(url=new_url)
+                else:
+                    await route.continue_()
+
+            await context.route("http://app.kejar.id/**", force_https)
 
             # -------------------------------------------------
             # NETWORK DISCOVERY

@@ -4,17 +4,17 @@
     "value": "kCm4xRl8pCph5Of8ROjjqYT50sEQWdYqTgHmCFs91MI-1791279482-1.2.1.1-C5uQe1K2jpqSZMLI7H01hpEg9L.utd7cwtCwirkvXH5v5PyXYvoGqbshtJkPO1ASNX_wx_Xsnxqn16M8jlv.oS3cwnmBDmYIcI1.NkcHbUu5VASNtJQRdfyaCJ12iGUOkb5cYGpRGrfL603w6TR7SRRBO2442Jd14axgN0VeIZmAbeB7XHMHehxzT1vYH.CoAFd_prFU7C0mGXHOlDc9VdfAjjWpf3g2DNyY1eex7o6I6.c29nptMzD_F65WikU3ApwacMScp3S2Lj6ULz1v1nVLLbr4QjlvYhyVcf0RnsXpBh7lvnEJNZNI49g4OciRugIHMBJznjNl7gIbofu7vZnWot2ep.bJSDsg4qvaTp28DF1KkJ68AiBK6f3NjfrFinnSwanbhWktGVeaXhYMYw",
     "domain": ".kejar.id",
     "path": "/",
-    "expires": 1822815484.850458,
+    "expires": -1,
     "httpOnly": true,
     "secure": true,
-    "sameSite": "None"
+    "sameSite": "Lax"
   },
   {
     "name": "_ga",
     "value": "GA1.1.842099802.1791279490",
     "domain": ".kejar.id",
     "path": "/",
-    "expires": 1825839636.811439,
+    "expires": -1,
     "httpOnly": false,
     "secure": false,
     "sameSite": "Lax"
@@ -24,27 +24,27 @@
     "value": "GS2.1.s1791279490$o1$g1$t1791279636$j60$l0$h0",
     "domain": ".kejar.id",
     "path": "/",
-    "expires": 1825839636.811011,
+    "expires": -1,
     "httpOnly": false,
     "secure": false,
     "sameSite": "Lax"
   },
   {
     "name": "XSRF-TOKEN",
-    "value": "eyJpdiI6InViSFVnRld2aDlWb0hNMFJHOS9KSlE9PSIsInZhbHVlIjoiMFVuZVE1TEJSK0VBMjFOMnJDUkdxS2huaURLY0xJL0ppZ0NsRnYwOGovNWR1YTRnbG1wVnh1Rmh0L0NUTVcxaytabUgzalg3Njc1SytkSkk2UHp0TzV4RTFGM3VpUEJtWXpRRnlqdW5wUWtQbVJSRFd4Slhvb1NpU2xJNTRMRTIiLCJtYWMiOiI3M2Y5ZDYwY2Q2OWE5NThjNzViYWRiYTgzOGI4NzIwY2Y5NDc0YzUxZWQ2MDIyYTFiMmYxNGM2N2FhNGYzM2EwIiwidGFnIjoiIn0%3D",
+    "value": "eyJpdiI6ImJacmZCUm1DaWhEYVFKU3FiTndkOFE9PSIsInZhbHVlIjoiOFA4RGFCNThRWDV1cUJGUkk2aGoyUVN1QzUwRzZUM3VnVGZEbXZXT3I3bWhuY0JiMWFHRk1vZTVLOHd2RzhIZzBlNVlQWjN6REZmYVVqMFRqT1VIVjJDKzREd1UrM3dJbmlIL3B6YU1QT0NqNGd1cXBNR09sVzl2ZHpkMjVQOTIiLCJtYWMiOiIyMmJjMTM5MTdlNGYzNGE2YjMxYmE0YTJhZWE1NGU1NTM2ODc0NzMyNjRmOTRhNmE2ZDA0ZTkwYTg2MmYyMmEwIiwidGFnIjoiIn0%3D",
     "domain": "app.kejar.id",
     "path": "/",
-    "expires": 1791548801.97957,
+    "expires": 1791552677.481,
     "httpOnly": false,
     "secure": false,
     "sameSite": "Lax"
   },
   {
     "name": "matrikulasi_session",
-    "value": "eyJpdiI6IkhUTE1IOWN4WjRmQllzZjAvd1pJd2c9PSIsInZhbHVlIjoiR002NDdCRUVxck9GM0xMRG9aY0ZMM2U0UUxrdmFlTkhSQm5qcVR0YzAzR0piOEM1eFlIZDBQMGFMWktYblNKcFlTZG1OYzZ5TW1lSVJMaStlZ1dKOStKSmtJbHQ1RGY3YXdmK0lKSk4wN1M2WHltWEJRVVFMQWE3SzRSK1p1cUEiLCJtYWMiOiJmNGQzMGM2ZmE0NDBmYzg5ODQwZjAyODNlN2I1NTA0MGQzMzhkMWI3YTQyM2NjYjU0MWQ3MDdkMmFmYzA4ZTdiIiwidGFnIjoiIn0%3D",
+    "value": "eyJpdiI6IlRRdFJNVFhIdUZMQ1k2V3gzaUpzY2c9PSIsInZhbHVlIjoibXZDTm9EdmpYTmIzRXN5Q241VS9MK2FOb1orUDZSRFN1ZUJQS3cydTRDNmQ4M0dHSFZjcS9RRm9HOEZYOFhRYXFBbkJPRW9YYmllWEM0Tm5kOG5jTmxUYWYycjFBdEREYlJaclJIRFR2MXpIWUhWcnlPaDlLQWZxZ1Nubmc3NDEiLCJtYWMiOiI0MWU4MzU0MGNjZmEzZWNlNTRjOWVlNmY0Y2I0Zjk0NGNlNDUyNmU4YjNkOGM5ODFkNWFhODJlYWQ4YjcyZjRiIiwidGFnIjoiIn0%3D",
     "domain": "app.kejar.id",
     "path": "/",
-    "expires": 1791548801.979672,
+    "expires": 1791552677.481,
     "httpOnly": true,
     "secure": false,
     "sameSite": "Lax"

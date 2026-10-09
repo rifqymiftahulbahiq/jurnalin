@@ -77,6 +77,7 @@ def init_database():
     """)
     add_column_if_missing(cursor, "meb", "school_week_id", "TEXT")
     add_column_if_missing(cursor, "meb", "completion_status", "TEXT DEFAULT 'BELUM LENGKAP'")
+    add_column_if_missing(cursor, "meb", "meb_id", "TEXT")
 
     # 4. MEB Target Settings
     cursor.execute("""
@@ -263,12 +264,12 @@ def save_user_mebs(telegram_id: int, meb_list: list):
 
         cursor.execute("""
             INSERT INTO meb (
-                telegram_id, kejar_id, report_period_id, meb_number, label,
+                telegram_id, meb_id, report_period_id, meb_number, label,
                 start_date, end_date, school_week, school_week_id, is_matrikulasi, completion_status, updated_at
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(telegram_id, meb_number) DO UPDATE SET
-                kejar_id = excluded.kejar_id,
+                meb_id = excluded.meb_id,
                 report_period_id = excluded.report_period_id,
                 label = excluded.label,
                 start_date = excluded.start_date,

@@ -159,11 +159,25 @@ class FillService:
                         raw_daily = await get_daily_activities(client, d_date, calendar_id)
                         daily_items = parse_daily_response(raw_daily)
 
+                        if not daily_items:
+                            logger.warning(f"Daily activities response returned empty items for date {d_str}, MEB {meb_num}. Raw response: {raw_daily}")
+
                         cat_payloads = []
+                        skipped_items = []
                         for item in daily_items:
                             deed_id = item.get("deed_id")
                             deedable_id = item.get("deedable_id")
                             item_name = item.get("name", "").lower()
+
+                            # Fallback: try extracting deedable_id from raw response
+                            if not deedable_id:
+                                raw = item.get("raw", {})
+                                deedable_id = (
+                                    raw.get("deedable_id")
+                                    or raw.get("id")
+                                    or raw.get("habit_id")
+                                )
+
                             if deedable_id:
                                 # Determine category based on haid status for salat/zikir
                                 selected_cat = "Melaksanakan"
@@ -187,28 +201,33 @@ class FillService:
                                 if deed_id:
                                     cat_entry["deed_id"] = deed_id
                                 cat_payloads.append(cat_entry)
+                            else:
+                                skipped_items.append(item.get("name", "unknown"))
+                                logger.warning(f"Daily item '{item.get('name')}' on {d_str} has no deedable_id, skipping.")
 
                         if cat_payloads:
                             await update_daily_deed(client, d_date, calendar_id, cat_payloads)
                             summary["success_count"] += 1
+                            skip_note = f" ({len(skipped_items)} item dilewati: {', '.join(skipped_items)})" if skipped_items else ""
                             summary["details"].append({
                                 "meb": meb_num,
                                 "date": d_str,
                                 "activity": "Pembiasaan Harian",
                                 "status": "SUCCESS",
-                                "message": f"Bulk update/create {len(cat_payloads)} aktivitas harian berhasil."
+                                "message": f"Bulk update/create {len(cat_payloads)} aktivitas harian berhasil.{skip_note}"
                             })
                             log_fill_action(self.telegram_id, meb_num, d_str, "DAILY", "Bulk Daily", "SUCCESS", f"{len(cat_payloads)} items")
                         else:
                             summary["skipped_count"] += 1
+                            skip_reason = f"Item tanpa deedable_id: {', '.join(skipped_items)}" if skipped_items else "API tidak mengembalikan item harian (response kosong)."
                             summary["details"].append({
                                 "meb": meb_num,
                                 "date": d_str,
                                 "activity": "Pembiasaan Harian",
                                 "status": "SKIPPED",
-                                "message": "Tidak ada item harian yang dapat diproses."
+                                "message": skip_reason
                             })
-                            log_fill_action(self.telegram_id, meb_num, d_str, "DAILY", "Bulk Daily", "SKIPPED", "CREATE request belum tervalidasi")
+                            log_fill_action(self.telegram_id, meb_num, d_str, "DAILY", "Bulk Daily", "SKIPPED", skip_reason)
 
                     except Exception as ex:
                         logger.error(f"Daily habit error for date {d_str}: {ex}")

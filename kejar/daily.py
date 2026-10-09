@@ -19,11 +19,33 @@ async def get_daily_activities(client: KejarClient, activity_date: date, calenda
 def parse_daily_response(response: dict) -> List[Dict[str, Any]]:
     """
     Parses dynamic daily activities response without hardcoding habit items.
+    Handles multiple response envelope formats from Kejar.id API.
     """
     result = []
-    items = response.get("data", [])
-    if isinstance(items, dict):
-        items = items.get("items", [])
+
+    # Unwrap various possible envelope formats
+    data = response.get("data", response)
+
+    # Format 1: {"data": {"items": [...]}}
+    if isinstance(data, dict):
+        items = data.get("items") or data.get("activities") or data.get("habits") or []
+        # Format 2: {"data": [...]} — data itself is a list
+        if not items and isinstance(data, list):
+            items = data
+    # Format 3: data is already a list
+    elif isinstance(data, list):
+        items = data
+    else:
+        items = []
+
+    # Last resort: check top-level keys
+    if not items:
+        items = (
+            response.get("items")
+            or response.get("activities")
+            or response.get("habits")
+            or []
+        )
 
     for item in items:
         if not isinstance(item, dict):

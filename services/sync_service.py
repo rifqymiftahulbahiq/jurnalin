@@ -103,7 +103,6 @@ async def sync_kejar_data(telegram_id: int) -> Dict[str, Any]:
         endpoints = [
             "/student/school-weeks",
             "/student/dashboard",
-            "/student/journal_salat_zikir/activities"
         ]
 
         mebs = []

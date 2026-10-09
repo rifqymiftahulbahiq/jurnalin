@@ -46,7 +46,7 @@ def generate_journal_plan(telegram_id: int, today: date = None) -> Dict[str, Any
             continue
 
         meb_obj = MebPeriod(
-            id=m.get("kejar_id", ""),
+            id=m.get("meb_id", ""),
             report_period_id=m.get("report_period_id", ""),
             number=m["meb_number"],
             label=m.get("label", f"MEB {m['meb_number']}"),
@@ -54,7 +54,7 @@ def generate_journal_plan(telegram_id: int, today: date = None) -> Dict[str, Any
             end_date=e_date,
             school_week=m.get("school_week", ""),
             is_matrikulasi=bool(m.get("is_matrikulasi", 0)),
-            school_week_id=m.get("school_week_id", m.get("kejar_id", ""))
+            school_week_id=m.get("school_week_id", m.get("meb_id", ""))
         )
 
         dates = eligible_dates(meb_obj, today)

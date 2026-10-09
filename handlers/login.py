@@ -153,5 +153,3 @@ async def login_text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return True
 
     return False
-
-    return False
